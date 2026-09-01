@@ -482,7 +482,7 @@ footer{padding:18px;text-align:center;font-size:11.5px;color:var(--fg-3);line-he
 <div class="tabs">
   <button data-tab="dash" class="active"><span class="ic">&#9703;</span>Home</button>
   <button data-tab="trends"><span class="ic">&#8961;</span>Trends</button>
-  <button data-tab="doc"><span class="ic">&#10010;</span>Doctor</button>
+  <button data-tab="doc"><span class="ic">&#65311;</span>Ask</button>
   <button data-tab="add"><span class="ic">&#65291;</span>Add</button>
   <button data-tab="meds"><span class="ic">&#8478;</span>Meds</button>
   <button data-tab="data"><span class="ic">&#9881;</span>Settings</button>
@@ -1066,7 +1066,7 @@ function renderDash(root){
   abn = abn.map(function(x){ return x.a; });
   document.getElementById("hdrSub").textContent=fmtDate(latest.date);
   var nflag=buildFlags().filter(function(x){return x.pri<3;}).length;
-  var h = nflag ? '<div class="card" id="docjump" style="cursor:pointer;border-left:4px solid var(--mag)"><h2 style="margin:0">'+nflag+' item'+(nflag===1?'':'s')+' to raise with your doctor →</h2></div>' : '';
+  var h = nflag ? '<div class="card" id="docjump" style="cursor:pointer;border-left:4px solid var(--mag)"><h2 style="margin:0">'+nflag+' thing'+(nflag===1?'':'s')+' to ask your doctor →</h2></div>' : '';
   if(counts.crit){
     h+='<div class="critbar" id="critbar"><span class="dot"></span>'+counts.crit+' critical value'+(counts.crit===1?'':'s')+' \u2014 discuss with a doctor promptly<span class="go">\u203a</span></div>';
   }
@@ -1479,7 +1479,7 @@ function buildFlags(){
 function renderDoc(root){
   var flags=buildFlags(), rs=sortedResults();
   if(!rs.length){ root.innerHTML='<div class="empty">No results yet.</div>'; return; }
-  var h='<div class="card"><h2>What to raise with your doctor</h2>'+
+  var h='<div class="card"><h2>What to ask your doctor</h2>'+
     '<div class="note" style="margin:0">Generated from your results as of '+fmtDate(rs[rs.length-1].date)+
     '. Ordered by how much attention they likely need.</div></div>';
   if(!flags.length) h+='<div class="empty">Nothing flagged — everything is within range and up to date.</div>';
