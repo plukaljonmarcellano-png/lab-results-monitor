@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0E5450">
+<script>
+(function(){
+  try{
+    var t=localStorage.getItem("labmon-theme");
+    if(t==="light"||t==="dark") document.documentElement.setAttribute("data-theme",t);
+  }catch(e){}                                  // private mode / blocked storage: fall back to system
+})();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Lab Monitor">
 <link rel="manifest" href="manifest.webmanifest">
@@ -34,7 +42,20 @@
   --f0:#58A98A; --f1:#CBB25C; --f2:#CE854C; --f3:#BC5A6B; --f4:#8A3A4B;
   --r:18px; --r-sm:12px;
 }
-:root[data-theme="light"], :root:not([data-theme="dark"]){}
+:root[data-theme="light"]{
+    --ink:#F2F6F6; --panel:#FFFFFF; --panel-2:#F7FAFA; --line:rgba(10,30,32,.09); --line-2:rgba(10,30,32,.16);
+    --fg:#0C1A1C; --fg-2:#57706F; --fg-3:#8AA0A0;
+    --cy:#0E8F86; --cy-d:#0B6F68; --cy-glow:rgba(14,143,134,.12);
+    --ok:#12855C; --ok-bg:rgba(18,133,92,.10);
+    --hi:#D62B54; --hi-bg:rgba(214,43,84,.10);
+    --lo:#A5720B; --lo-bg:rgba(165,114,11,.12);
+    --mag:#C0247D;
+    --s0:#12855C; --s0-bg:rgba(18,133,92,.10);
+    --s1:#8A6B00; --s1-bg:rgba(214,168,0,.20);
+    --s2:#C2410C; --s2-bg:rgba(234,88,12,.17);
+    --s3:#D62B54; --s3-bg:rgba(214,43,84,.11);
+    --s4:#8C0A26; --s4-solid:#8C0A26; --s4-fg:#FFFFFF;
+}
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){
     --ink:#F2F6F6; --panel:#FFFFFF; --panel-2:#F7FAFA; --line:rgba(10,30,32,.09); --line-2:rgba(10,30,32,.16);
@@ -430,6 +451,8 @@ function note(txt, err){
 
 var SB = {
   saving:false, again:false,
+  pendingDeletes:[],   // dates the USER deleted in this session - the only rows save() may remove
+  medsDirty:false,     // medications are rewritten wholesale, so only touch them when changed
 
   load: function(){
     busy(true);
@@ -450,6 +473,7 @@ var SB = {
         STATE.analytes = r[2].data.analytes;
       }
       byId = {}; STATE.analytes.forEach(function(a){ byId[a.id]=a; });
+      SB.pendingDeletes = []; SB.medsDirty = false;
       busy(false);
       note(STATE.results.length + " reports \u00b7 synced");
     });
@@ -462,22 +486,29 @@ var SB = {
     var reports = STATE.results.map(function(r){
       return { taken_on:r.date, lab:r.lab||null, values:r.values };
     });
-    var dates = reports.map(function(r){ return r.taken_on; });
+    var drop = self.pendingDeletes.slice();
+
+    if(!reports.length && !drop.length){
+      // nothing loaded and nothing deleted - almost certainly a failed load, not an
+      // empty record. Refuse to write rather than risk overwriting a real record.
+      self.saving = false; busy(false); note("Nothing to save", true);
+      return Promise.resolve();
+    }
 
     return sb.from("lab_reports").upsert(reports, { onConflict:"user_id,taken_on" })
       .then(function(res){
         if(res.error) throw res.error;
-        var q = sb.from("lab_reports").delete();
-        return dates.length ? q.not("taken_on","in","(" + dates.join(",") + ")")
-                            : q.neq("taken_on","1900-01-01");
+        if(!drop.length) return { error:null };          // never a blanket delete
+        return sb.from("lab_reports").delete().in("taken_on", drop);
       })
       .then(function(res){
         if(res && res.error) throw res.error;
+        if(!self.medsDirty) return { error:null };        // leave other devices' meds alone
         return sb.from("medications").delete().not("id","is",null);
       })
       .then(function(res){
         if(res && res.error) throw res.error;
-        if(!STATE.meds.length) return { error:null };
+        if(!self.medsDirty || !STATE.meds.length) return { error:null };
         return sb.from("medications").insert(STATE.meds.map(function(m){
           return { name:m.name, started_on:m.start, until_on:m.until||null, note:m.note||null };
         }));
@@ -488,6 +519,7 @@ var SB = {
       })
       .then(function(){
         self.saving = false; busy(false);
+        self.pendingDeletes = []; self.medsDirty = false;
         note(STATE.results.length + " reports \u00b7 synced");
         if(self.again){ self.again = false; self.save(); }
       })
@@ -596,6 +628,31 @@ var SEV = [
 
 var SEV_BORDER = 0.10, SEV_MILD = 0.50, SEV_MARKED = 1.50;
 
+/* Explicit clinical stages, ascending; each band runs up to `to` (exclusive), the last
+   is open-ended. Where these exist they REPLACE the proportional rule, for both the
+   chip and the bar. Sources are named so they can be checked and changed. */
+var STAGED = {
+  sys:  {src:"Stages: ACC/AHA 2017 blood-pressure categories.",
+         bands:[{to:90,lvl:4,dir:"lo"},{to:120,lvl:0},{to:130,lvl:1,dir:"hi"},
+                {to:140,lvl:2,dir:"hi"},{to:180,lvl:3,dir:"hi"},{to:null,lvl:4,dir:"hi"}]},
+  dia:  {src:"Stages: ACC/AHA 2017 blood-pressure categories.",
+         bands:[{to:60,lvl:4,dir:"lo"},{to:80,lvl:0},{to:90,lvl:2,dir:"hi"},
+                {to:120,lvl:3,dir:"hi"},{to:null,lvl:4,dir:"hi"}]},
+  hba1c:{src:"Stages: ADA - under 5.7 normal, 5.7-6.4 prediabetes, 6.5+ diabetes, 8+ above target.",
+         bands:[{to:5.7,lvl:0},{to:6.5,lvl:1,dir:"hi"},{to:8,lvl:2,dir:"hi"},
+                {to:10,lvl:3,dir:"hi"},{to:null,lvl:4,dir:"hi"}]},
+  eag:  {src:"Mirrors the HbA1c stages, converted to average glucose.",
+         bands:[{to:117,lvl:0},{to:139,lvl:1,dir:"hi"},{to:183,lvl:2,dir:"hi"},
+                {to:240,lvl:3,dir:"hi"},{to:null,lvl:4,dir:"hi"}]},
+  gfr:  {src:"Stages: KDIGO CKD categories G1-G5.",
+         bands:[{to:15,lvl:4,dir:"lo"},{to:45,lvl:3,dir:"lo"},{to:60,lvl:2,dir:"lo"},
+                {to:90,lvl:1,dir:"lo"},{to:null,lvl:0}]},
+  vitd: {src:"Stages: Endocrine Society - under 20 deficient, 20-29 insufficient, over 150 toxic.",
+         bands:[{to:10,lvl:4,dir:"lo"},{to:20,lvl:3,dir:"lo"},{to:30,lvl:2,dir:"lo"},
+                {to:100,lvl:0},{to:150,lvl:2,dir:"hi"},{to:null,lvl:4,dir:"hi"}]}
+};
+function stagesFor(a){ return STAGED[a.id]||null; }
+
 function sevOf(a,v){
   if(v==null) return {lvl:-1,dir:null,cls:"na",chip:"\u2014",label:"No data",dev:null,crit:false};
   var lo=a.lo, hi=a.hi, c=CRIT[a.id]||{};
@@ -603,6 +660,13 @@ function sevOf(a,v){
     var word=SEV[lvl].t, dt=dir==="hi"?"HIGH":dir==="lo"?"LOW":"";
     var chip = lvl===0 ? "NORMAL" : (word ? (word+(dt?" "+dt:"")) : dt);
     return {lvl:lvl,dir:dir,cls:SEV[lvl].k,chip:chip,label:SEV[lvl].full,dev:dev,crit:!!crit};
+  }
+  var stg=stagesFor(a);
+  if(stg){
+    for(var bi=0; bi<stg.bands.length; bi++){
+      var bd=stg.bands[bi];
+      if(bd.to==null || v<bd.to) return mk(bd.lvl, bd.dir||null, null, bd.lvl===4);
+    }
   }
   if(c.lo!=null && v<c.lo) return mk(4,"lo",null,true);
   if(c.hi!=null && v>c.hi) return mk(4,"hi",null,true);
@@ -638,6 +702,20 @@ function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").rep
 /* ---- zone model: turn the severity tiers into contiguous bands in value space ---- */
 function zonesOf(a){
   var lo=a.lo, hi=a.hi;
+  var stg=stagesFor(a);
+  if(stg){
+    var fin=stg.bands.filter(function(b){ return b.to!=null; });
+    if(!fin.length) return null;
+    var f0=fin[0].to, fN=fin[fin.length-1].to, pad=Math.max((fN-f0)*0.25, fN*0.06);
+    var zs=Math.max(0, f0-pad), ze=fN+pad, prev=zs, sg=[];
+    stg.bands.forEach(function(bd){
+      var to = bd.to==null ? ze : Math.min(bd.to, ze);
+      if(to>prev) sg.push({a:prev, b:to, cls:"s"+bd.lvl});
+      prev=to;
+    });
+    if(prev<ze) sg.push({a:prev, b:ze, cls:"s"+stg.bands[stg.bands.length-1].lvl});
+    return {s:zs, e:ze, segs:sg};
+  }
   if(lo==null && hi==null) return null;
   var c=CRIT[a.id]||{};
   var span=(lo!=null&&hi!=null&&hi>lo)?(hi-lo):null;
@@ -963,6 +1041,17 @@ function renderData(root){
        '<div><button class="mini-btn" data-edit="'+r.date+'">Edit</button><button class="mini-btn del" data-del="'+r.date+'">Delete</button></div></div>';
   });
   h+='</div>';
+  var th='system';
+  try{ th=localStorage.getItem("labmon-theme")||'system'; }catch(e){}
+  h+='<div class="card"><h2>Appearance</h2>'+
+     '<div class="seg" style="margin-bottom:2px">'+
+       ['system','light','dark'].map(function(t){
+         return '<button data-theme-set="'+t+'" class="'+(t===th?'on':'')+'">'+
+                (t==='system'?'System':t==='light'?'Light':'Dark')+'</button>';
+       }).join('')+
+     '</div>'+
+     '<div class="note" style="margin:2px 0 0">System follows your phone or computer\u2019s own light/dark setting. '+
+     'This choice is saved on this device only.</div></div>';
   h+='<div class="card"><h2>On your other devices</h2>'+
      '<div class="note" style="margin:0 0 8px">Your results sync to your account, so opening this link on any phone, tablet or computer shows the same data. '+
      'To get an icon on your home screen: <b>iPhone</b> — open in Safari, tap Share, then Add to Home Screen. '+
@@ -975,7 +1064,7 @@ function renderData(root){
   root.innerHTML=h;
   root.querySelectorAll("[data-del]").forEach(function(b){ b.onclick=function(){
     var d=b.getAttribute("data-del");
-    if(confirm("Delete the "+fmtDate(d)+" report?")){ STATE.results=STATE.results.filter(function(r){return r.date!==d;}); persist(); render(); }
+    if(confirm("Delete the "+fmtDate(d)+" report?")){ SB.pendingDeletes.push(d); STATE.results=STATE.results.filter(function(r){return r.date!==d;}); persist(); render(); }
   };});
   root.querySelectorAll("[data-edit]").forEach(function(b){ b.onclick=function(){
     TAB="add"; render(b.getAttribute("data-edit"));
@@ -1068,7 +1157,8 @@ function openModal(id){
   var back = SHEET_BACK ? '<button class="btn ghost" id="m-back" style="margin-top:8px">&lsaquo; Back</button>' : '';
   sheetOpen(
     '<h3>'+esc(a.name)+'</h3><div class="rng">Reference '+esc(rangeText(a))+'</div>'+
-    '<div style="margin:2px 0 20px">'+gaugeFull(a,pts[pts.length-1].v)+'</div>'+about+
+    '<div style="margin:2px 0 12px">'+gaugeFull(a,pts[pts.length-1].v)+'</div>'+
+    (stagesFor(a)?'<div class="note" style="margin:0 0 16px">'+esc(stagesFor(a).src)+'</div>':'<div style="height:8px"></div>')+about+
     '<div class="chartbox">'+bigChartSVG(a)+'</div>'+
     '<table class="hist"><tr><th>Date</th><th>Result</th><th>Status</th></tr>'+rows+'</table>'+
     '<button class="btn ghost" id="m-close">Close</button>'+back);
@@ -1088,6 +1178,14 @@ function buildDocumentHTML(){
   return "<!DOCTYPE html>\n"+clone.outerHTML;
 }
 
+function applyTheme(t){
+  var el=document.documentElement;
+  if(t==="light"||t==="dark") el.setAttribute("data-theme",t); else el.removeAttribute("data-theme");
+  try{ if(t==="system") localStorage.removeItem("labmon-theme"); else localStorage.setItem("labmon-theme",t); }catch(e){}
+  var dark = t==="dark" || (t==="system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  var mt=document.querySelector('meta[name="theme-color"]');
+  if(mt) mt.setAttribute("content", dark ? "#0A1214" : "#F2F6F6");
+}
 function persist(){ SB.save(); }
 
 function renderMeds(root){
@@ -1109,12 +1207,12 @@ function renderMeds(root){
     var n=document.getElementById("md-name").value.trim(), d=document.getElementById("md-date").value;
     if(!n||!d){ alert("Enter a name and start date."); return; }
     if(!STATE.meds) STATE.meds=[];
-    STATE.meds.push({name:n,start:d,note:document.getElementById("md-note").value.trim()});
+    SB.medsDirty=true; STATE.meds.push({name:n,start:d,note:document.getElementById("md-note").value.trim()});
     persist(); render();
   };
   root.querySelectorAll("[data-delmed]").forEach(function(b){ b.onclick=function(){
     var i=+b.getAttribute("data-delmed");
-    if(confirm("Remove "+STATE.meds[i].name+"?")){ STATE.meds.splice(i,1); persist(); render(); }
+    if(confirm("Remove "+STATE.meds[i].name+"?")){ SB.medsDirty=true; STATE.meds.splice(i,1); persist(); render(); }
   };});
 }
 function daysBetween(a,b){ return Math.round((+new Date(b)-+new Date(a))/86400000); }
@@ -1378,6 +1476,8 @@ function render(editDate){
   if(TAB==="doc") root.querySelectorAll(".flag[data-open]").forEach(function(r){ r.onclick=function(){
     SHEET_BACK=null; openModal(r.getAttribute("data-open")); }; });
   root.querySelectorAll("[data-kpi]").forEach(function(r){ r.onclick=function(){ openStatusList(r.getAttribute("data-kpi")); }; });
+  root.querySelectorAll("[data-theme-set]").forEach(function(b){ b.onclick=function(){
+    applyTheme(b.getAttribute("data-theme-set")); render(); }; });
   root.querySelectorAll("[data-report]").forEach(function(r){ r.onclick=function(e){
     if(e.target.tagName==="BUTTON") return; openReport(r.getAttribute("data-report")); }; });
   root.querySelectorAll("[data-cat]").forEach(function(r){ if(r.classList.contains("taph")) r.onclick=function(){
