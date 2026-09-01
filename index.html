@@ -159,6 +159,11 @@ header .sub{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:6px;
 .row:last-child{border-bottom:none}
 .row .nm b{font-size:15px;font-weight:700;display:block;letter-spacing:-.01em}
 .row .nm span{font-size:12px;color:var(--fg-3);font-weight:500}
+.row .nm .stale{
+  display:inline-block;margin-left:7px;padding:1px 6px;border-radius:99px;
+  background:var(--panel-2);border:1px solid var(--line);color:var(--fg-3);
+  font-size:10.5px;font-weight:700;
+}
 .row .val{text-align:right;display:flex;align-items:baseline;gap:8px;justify-content:flex-end}
 .row .val b{font-size:19px;font-weight:800;letter-spacing:-.02em}
 .row .val span{font-size:11.5px;color:var(--fg-2);font-weight:600}
@@ -325,6 +330,35 @@ label{font-size:12px;font-weight:700;color:var(--fg-2);display:block;margin:12px
 .flag .seeall{font-size:12.5px;font-weight:700;color:var(--cy);margin-top:9px}
 .card h2.taph{cursor:pointer;justify-content:space-between}
 .card h2.taph .go{font-size:12px;font-weight:700;color:var(--cy);letter-spacing:0}
+
+/* ---------- collapsible category cards ---------- */
+.card.cat{padding:14px 16px}
+.card.cat h2{margin-bottom:0;cursor:pointer;gap:9px}
+.card.cat.open h2{margin-bottom:10px}
+.card.cat .cname{flex:1;min-width:0}
+.card.cat .cmeta{font-size:11.5px;font-weight:700;color:var(--fg-3);white-space:nowrap;letter-spacing:0}
+.card.cat .cmeta b{color:var(--s3)}
+.card.cat .cmeta i{color:var(--s1);font-style:normal}
+.card.cat .chev{
+  color:var(--fg-3);font-size:15px;font-weight:800;flex:none;line-height:1;
+  transform:rotate(90deg);transition:transform .16s ease;
+}
+.card.cat.open .chev{transform:rotate(-90deg)}
+.card.cat .catbody{display:none}
+.card.cat.open .catbody{display:block}
+.gotrend{
+  display:block;width:100%;text-align:right;background:none;border:0;
+  color:var(--cy);font-weight:700;font-size:12.5px;padding:11px 2px 0;cursor:pointer;font-family:inherit;
+}
+.catall{
+  display:flex;gap:8px;margin:-2px 0 12px;
+}
+.catall button{
+  flex:1;background:var(--panel);border:1px solid var(--line);color:var(--fg-2);
+  border-radius:var(--r-sm);padding:9px 10px;font-size:12px;font-weight:700;
+  font-family:inherit;cursor:pointer;
+}
+@media (prefers-reduced-motion:reduce){ .card.cat .chev{transition:none} }
 .datecard[data-report]{cursor:pointer}
 .disc{font-size:12px;color:var(--fg-3);background:var(--panel-2);border-radius:14px;padding:13px 15px;margin-top:16px;line-height:1.55}
 
@@ -950,12 +984,13 @@ function bigChartSVG(a){
   return s;
 }
 
-function analyteRow(a){
+function analyteRow(a, asOf){
   var pts=series(a.id);
   if(!pts.length) return "";
   var cur=pts[pts.length-1];
+  var stale = (asOf && cur.date!==asOf) ? '<span class="stale">'+fmtDate(cur.date)+'</span>' : '';
   return '<div class="row" data-open="'+a.id+'">'+
-    '<div class="nm"><b>'+esc(a.name)+(a.desc?'<span class="q">?</span>':'')+'</b><span>'+esc(rangeText(a))+'</span></div>'+
+    '<div class="nm"><b>'+esc(a.name)+(a.desc?'<span class="q">?</span>':'')+'</b><span>'+esc(rangeText(a))+stale+'</span></div>'+
     '<div class="val"><span>'+deltaArrow(a,pts)+'</span><b>'+fmtNum(cur.v)+'</b>'+
       sevChip(a,cur.v)+'</div>'+
     gaugeHTML(a,cur.v)+'</div>';
@@ -968,8 +1003,9 @@ function renderDash(root){
   var counts={norm:0,bord:0,out:0,crit:0};
   var abn=[], crits=[];
   STATE.analytes.forEach(function(a){
-    var v=latest.values[a.id]; if(v==null) return;
-    var s=sevOf(a,v);
+    var pts=series(a.id); if(!pts.length) return;      // most recent value for EVERY test,
+    var cur=pts[pts.length-1];                          // not just the ones in the last draw
+    var s=sevOf(a,cur.v);
     if(s.lvl===0) counts.norm++;
     else if(s.lvl===1) counts.bord++;
     else { counts.out++; abn.push({a:a,lvl:s.lvl,dev:s.dev||0}); }
@@ -989,14 +1025,34 @@ function renderDash(root){
     '<div class="kpi s3" data-kpi="out"><div class="n">'+counts.out+'</div><div class="l">Out of range</div></div></div>';
   h+=legendHTML();
   if(abn.length){
-    h+='<div class="card abn-list"><h2>Outside the reference range ('+fmtDate(latest.date)+') \u2014 most severe first</h2>';
-    abn.forEach(function(a){ h+=analyteRow(a); });
+    h+='<div class="card abn-list"><h2>Outside the reference range \u2014 most severe first</h2>'+
+       '<div class="note" style="margin:-4px 0 8px">The most recent value of every test. A date shown against a '+
+       'result means it was not part of the latest report.</div>';
+    abn.forEach(function(a){ h+=analyteRow(a, latest.date); });
     h+='</div>';
   }
   var cats=[]; STATE.analytes.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
+  h+='<div class="catall"><button id="cat-open">Expand all</button><button id="cat-shut">Collapse all</button></div>';
   cats.forEach(function(c){
-    var rows=STATE.analytes.filter(function(a){return a.cat===c && series(a.id).length;}).map(analyteRow).join("");
-    if(rows) h+='<div class="card"><h2 class="taph" data-cat="'+esc(c)+'">'+esc(c)+'<span class="go">All trends &rsaquo;</span></h2>'+rows+'</div>';
+    var list=STATE.analytes.filter(function(a){return a.cat===c && series(a.id).length;});
+    if(!list.length) return;
+    // summarise what is inside so the header carries the signal without being opened
+    var nOut=0, nBord=0;
+    list.forEach(function(a){
+      var pts=series(a.id); var L=sevOf(a,pts[pts.length-1].v).lvl;
+      if(L>=2) nOut++; else if(L===1) nBord++;
+    });
+    var meta = nOut  ? '<b>'+nOut+' out of range</b>'
+             : nBord ? '<i>'+nBord+' borderline</i>'
+             : list.length+' test'+(list.length===1?'':'s');
+    var open = CATOPEN[c] ? ' open' : '';
+    h+='<div class="card cat'+open+'" data-catcard="'+esc(c)+'">'+
+         '<h2 data-cattoggle="'+esc(c)+'"><span class="cname">'+esc(c)+'</span>'+
+           '<span class="cmeta">'+meta+'</span><span class="chev">&rsaquo;</span></h2>'+
+         '<div class="catbody">'+list.map(function(a){ return analyteRow(a, latest.date); }).join("")+
+           '<button class="gotrend" data-gotrend="'+esc(c)+'">All trends &rsaquo;</button>'+
+         '</div>'+
+       '</div>';
   });
   root.innerHTML=h;
   var dj=document.getElementById("docjump");
@@ -1160,8 +1216,8 @@ function openStatusList(st){
   var rs=sortedResults(); if(!rs.length) return;
   var latest=rs[rs.length-1];
   var list=STATE.analytes.filter(function(a){
-    var v=latest.values[a.id]; if(v==null) return false;
-    var L=sevOf(a,v).lvl;
+    var pts=series(a.id); if(!pts.length) return false;
+    var L=sevOf(a,pts[pts.length-1].v).lvl;
     if(st==="norm") return L===0;
     if(st==="bord") return L===1;
     if(st==="out")  return L>=2;
@@ -1171,7 +1227,7 @@ function openStatusList(st){
   var t = st==="norm" ? "Within range" : st==="bord" ? "Borderline \u2014 inside the range but near a limit"
         : st==="crit" ? "Critical values" : st==="out" ? "Outside the reference range"
         : st==="hi" ? "Above range" : "Below range";
-  listSheet(t, list.length+" of your results on "+fmtDate(latest.date)+" — tap any test for its history", list,
+  listSheet(t, list.length+" test"+(list.length===1?"":"s")+", each at its most recent value — tap any for its history", list,
             function(){ openStatusList(st); });
 }
 
@@ -1229,6 +1285,11 @@ function applyTheme(t){
   var mt=document.querySelector('meta[name="theme-color"]');
   if(mt) mt.setAttribute("content", dark ? "#0A1214" : "#F2F6F6");
 }
+/* which category cards are expanded - remembered on this device */
+var CATOPEN = {};
+try{ CATOPEN = JSON.parse(localStorage.getItem("labmon-cats")||"{}") || {}; }catch(e){ CATOPEN={}; }
+function catSave(){ try{ localStorage.setItem("labmon-cats", JSON.stringify(CATOPEN)); }catch(e){} }
+
 function persist(){ SB.save(); }
 
 function renderMeds(root){
@@ -1525,6 +1586,21 @@ function render(editDate){
     if(e.target.tagName==="BUTTON") return; openReport(r.getAttribute("data-report")); }; });
   root.querySelectorAll("[data-cat]").forEach(function(r){ if(r.classList.contains("taph")) r.onclick=function(){
     TRENDCAT=r.getAttribute("data-cat"); TAB="trends"; render(); window.scrollTo(0,0); }; });
+  root.querySelectorAll("[data-cattoggle]").forEach(function(hd){ hd.onclick=function(){
+    var c=hd.getAttribute("data-cattoggle");
+    var card=root.querySelector('[data-catcard="'+c.replace(/"/g,'\\"')+'"]');
+    var nowOpen = !card.classList.contains("open");
+    card.classList.toggle("open", nowOpen);
+    if(nowOpen) CATOPEN[c]=1; else delete CATOPEN[c];
+    catSave();
+  }; });
+  root.querySelectorAll("[data-gotrend]").forEach(function(btn){ btn.onclick=function(e){
+    e.stopPropagation(); TRENDCAT=btn.getAttribute("data-gotrend"); TAB="trends"; render(); window.scrollTo(0,0); }; });
+  var co=document.getElementById("cat-open"), cs=document.getElementById("cat-shut");
+  if(co) co.onclick=function(){ root.querySelectorAll("[data-catcard]").forEach(function(card){
+      card.classList.add("open"); CATOPEN[card.getAttribute("data-catcard")]=1; }); catSave(); };
+  if(cs) cs.onclick=function(){ root.querySelectorAll("[data-catcard]").forEach(function(card){
+      card.classList.remove("open"); }); CATOPEN={}; catSave(); };
   root.querySelectorAll("[data-gomeds]").forEach(function(r){ r.onclick=function(){
     TAB="meds"; render(); window.scrollTo(0,0); }; });
 }
