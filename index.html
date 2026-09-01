@@ -521,6 +521,30 @@ svg[data-pts]{touch-action:pan-y}
 /* ".row .nm span" is (0,2,1) and would otherwise beat ".star.on" at (0,2,0),
    which greys out a star rendered as a span rather than a button. Name the
    container in the star's own rules so it wins wherever it is used. */
+.datecard .treats{
+  display:block;margin-top:3px;font-size:12px;font-weight:700;color:var(--cy);
+}
+.datecard .tgts{
+  display:block;margin-top:2px;font-size:11px;color:var(--fg-3);font-style:italic;
+}
+.tgtpick{
+  max-height:230px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:10px 12px;background:var(--panel-2);
+}
+.tgtcat{
+  font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--fg-3);margin:10px 0 5px;
+}
+.tgtcat:first-child{margin-top:0}
+.tgtcat.sel{color:var(--cy)}
+.tgt{
+  display:inline-block;margin:0 5px 5px 0;padding:5px 11px;border-radius:99px;
+  border:1px solid var(--line-2);background:var(--panel);color:var(--fg-2);
+  font-size:12px;font-weight:700;cursor:pointer;user-select:none;
+}
+.tgt input{position:absolute;opacity:0;width:0;height:0}
+.tgt.on{background:var(--cy);border-color:var(--cy);color:#04201E}
+
 .star, .nm .star{
   background:none;border:none;padding:0 7px 0 0;margin:0;cursor:pointer;font-family:inherit;
   font-size:16px;line-height:1;color:var(--fg-3);vertical-align:-1px;
@@ -644,7 +668,7 @@ var SB = {
     busy(true);
     return Promise.all([
       sb.from("lab_reports").select("taken_on,lab,values").order("taken_on"),
-      sb.from("medications").select("name,started_on,until_on,note").order("started_on"),
+      sb.from("medications").select("name,started_on,until_on,note,treats,targets").order("started_on"),
       sb.from("app_settings").select("analytes,profile,watch").maybeSingle()
     ]).then(function(r){
       if(r[0].error) throw r[0].error;
@@ -653,7 +677,8 @@ var SB = {
         return { date:x.taken_on, lab:x.lab||"", values:x.values||{} };
       });
       STATE.meds = (r[1].data||[]).map(function(x){
-        return { name:x.name, start:x.started_on, until:x.until_on||"", note:x.note||"" };
+        return { name:x.name, start:x.started_on, until:x.until_on||"", note:x.note||"",
+                 treats:x.treats||"", targets:x.targets||[] };
       });
       if(r[2] && r[2].data && r[2].data.analytes && r[2].data.analytes.length){
         STATE.analytesRaw = r[2].data.analytes;
@@ -704,7 +729,8 @@ var SB = {
         if(res && res.error) throw res.error;
         if(!self.medsDirty || !STATE.meds.length) return { error:null };
         return sb.from("medications").insert(STATE.meds.map(function(m){
-          return { name:m.name, started_on:m.start, until_on:m.until||null, note:m.note||null };
+          return { name:m.name, started_on:m.start, until_on:m.until||null, note:m.note||null,
+                   treats:m.treats||null, targets:m.targets||[] };
         }));
       })
       .then(function(res){
@@ -1078,7 +1104,7 @@ function deltaArrow(a,pts){
 
 function bigChartSVG(a){
   var pts=series(a.id);
-  var nmed=MEDMARK ? (STATE.meds||[]).filter(function(md){return md.start;}).length : 0;
+  var nmed=MEDMARK ? medsFor(a.id).length : 0;
   var W=680,H=258+(nmed>1?(nmed-1)*17:0),PL=48,PR=16,PT=16,PB=44;
   var vs=pts.map(function(p){return p.v;});
   var mn=Math.min.apply(null,vs.concat(a.lo!=null?[a.lo]:[])), mx=Math.max.apply(null,vs.concat(a.hi!=null?[a.hi]:[]));
@@ -1101,8 +1127,8 @@ function bigChartSVG(a){
   var medPlan=[], medRows=0;
   if(MEDMARK) (function(){
     var placed=[];
-    (STATE.meds||[]).forEach(function(md){
-      if(!md.start || pts.length<2 || span<=0) return;
+    medsFor(a.id).forEach(function(md){
+      if(pts.length<2 || span<=0) return;
       if(md.start<pts[0].date || md.start>pts[pts.length-1].date) return;
       placed.push({x:XT(md.start), name:md.name});
     });
@@ -1473,9 +1499,12 @@ function renderData(root){
      '<div class="note" style="margin:2px 0 0">System follows your phone or computer\u2019s own light/dark setting. '+
      'Also on the button at the top right of every screen. Saved on this device only.</div></div>';
   h+='<div class="card"><h2>Charts</h2>'+medToggle()+
-     '<div class="note" style="margin:10px 0 0">Medication markers draw a dashed line on every trend chart '+
-     'at the date each medication started, so you can see what changed and when. With five medications that '+
-     'is five rows of labels above every chart \u2014 turn them off to give the space back to the line. '+
+     '<div style="margin:10px 0 0">'+medOnlyToggle()+'</div>'+
+     '<div class="note" style="margin:10px 0 0">Medication markers draw a dashed line at the date each '+
+     'medication started, so you can see what changed and when. The second switch keeps each marker to the '+
+     'tests that medication is actually for \u2014 the statin on the cholesterol charts, the blood-pressure '+
+     'tablet on blood pressure \u2014 instead of all of them on all 49. Turn it off to show each medication '+
+     'on every chart instead. Either way, a medication with no target tests never marks anything. '+
      'Saved on this device only.</div></div>';
   var nLab=0, nVit=0;
   rs.forEach(function(r){ if(reportKind(r)==="lab") nLab++; else nVit++; });
@@ -1725,14 +1754,37 @@ function starBtn(kind, key, on){
 }
 
 var MEDMARK = true;                           // medication marker lines on charts
+var MEDONLY = true;                           // ...only where the medication targets that test
 try{ MEDMARK = localStorage.getItem("labmon-medmark") !== "0"; }catch(e){}
+try{ MEDONLY = localStorage.getItem("labmon-medonly") !== "0"; }catch(e){}
 function setMedMark(on){
   MEDMARK = !!on;
   try{ localStorage.setItem("labmon-medmark", MEDMARK ? "1" : "0"); }catch(e){}
 }
+function setMedOnly(on){
+  MEDONLY = !!on;
+  try{ localStorage.setItem("labmon-medonly", MEDONLY ? "1" : "0"); }catch(e){}
+}
+/* No target tests means the medication has nothing to do with anything being
+   tracked - a hair supplement, say - so it never draws a marker, filter on or
+   off. The filter only decides whether a medication that DOES target something
+   is confined to those charts or shown on all of them. */
+function medTargets(md){ return (md && md.targets) || []; }
+function medHits(md, id){ return medTargets(md).indexOf(id) >= 0; }
+function medsFor(id){
+  return (STATE.meds||[]).filter(function(md){
+    if(!md.start || !medTargets(md).length) return false;
+    return !MEDONLY || medHits(md,id);
+  });
+}
 function medToggle(){
   return '<label class="tog"><input type="checkbox" id="medtog"'+(MEDMARK?" checked":"")+'>'+
          '<span class="sw"></span><span class="tl">Medication markers</span></label>';
+}
+function medOnlyToggle(){
+  return '<label class="tog"><input type="checkbox" id="medonly"'+(MEDONLY?" checked":"")+
+         (MEDMARK?"":" disabled")+'>'+
+         '<span class="sw"></span><span class="tl">Only on the tests they target</span></label>';
 }
 
 var SEARCH="";                                // transient: never persisted
@@ -1841,8 +1893,13 @@ function renderMeds(root){
       when += ' \u00b7 ongoing';
       tag='<span class="kind">ongoing</span>';
     }
+    var tg=medTargets(md);
+    var tnames=tg.map(function(x){ return byId[x]?byId[x].name:x; });
     h+='<div class="datecard"><div><b>'+esc(md.name)+'</b>'+tag+
-         '<span>'+when+(md.note?' \u00b7 '+esc(md.note):'')+'</span></div>'+
+         (md.treats?'<span class="treats">'+esc(md.treats)+'</span>':'')+
+         '<span>'+when+(md.note?' \u00b7 '+esc(md.note):'')+'</span>'+
+         (tnames.length?'<span class="tgts">Tracked by: '+esc(tnames.join(", "))+'</span>':'')+
+       '</div>'+
        '<div><button class="mini-btn" data-editmed="'+i+'">Edit</button>'+
             '<button class="mini-btn del" data-delmed="'+i+'">Remove</button></div></div>';
   });
@@ -1854,7 +1911,38 @@ function renderMeds(root){
        '<div><label>End date</label><input type="date" id="md-until" value="'+(ed?esc(ed.until||''):'')+'"></div>'+
      '</div>'+
      '<div class="note" style="margin:6px 0 0">Blank end date means you are still taking it.</div>'+
-     '<label>Note (optional)</label><input type="text" id="md-note" placeholder="dose, reason, prescriber" value="'+(ed?esc(ed.note||''):'')+'">'+
+     '<label>What is it for?</label>'+
+     '<input type="text" id="md-treats" placeholder="e.g. High cholesterol" value="'+(ed?esc(ed.treats||''):'')+'">'+
+     '<label>Note (optional)</label><input type="text" id="md-note" placeholder="dose, strength, prescriber" value="'+(ed?esc(ed.note||''):'')+'">'+
+     '<label style="margin-top:14px">Which tests should it mark?</label>'+
+     '<div class="note" style="margin:0 0 8px">The marker line appears on these charts only. <b>Tick nothing '+
+     'and it never marks any chart</b> \u2014 right for anything that has nothing to do with the tests you '+
+     'track.</div>'+
+     '<div class="tgtpick">'+
+       (function(){
+         var chosen = ed ? medTargets(ed) : [];
+         function chip(x, on){
+           return '<label class="tgt'+(on?" on":"")+'">'+
+             '<input type="checkbox" class="md-tgt" value="'+esc(x.id)+'"'+(on?" checked":"")+'>'+
+             esc(x.name)+'</label>';
+         }
+         var out="";
+         var picked=STATE.analytes.filter(function(x){ return chosen.indexOf(x.id)>=0; });
+         if(picked.length){
+           out+='<div class="tgtcat sel">Selected \u00b7 '+picked.length+'</div>'+
+                picked.map(function(x){ return chip(x,true); }).join("");
+         }
+         var cats=[]; STATE.analytes.forEach(function(x){ if(cats.indexOf(x.cat)<0) cats.push(x.cat); });
+         out+=cats.map(function(c){
+           var list=STATE.analytes.filter(function(x){
+             return x.cat===c && series(x.id).length && chosen.indexOf(x.id)<0;
+           });
+           if(!list.length) return "";
+           return '<div class="tgtcat">'+esc(c)+'</div>'+list.map(function(x){ return chip(x,false); }).join("");
+         }).join("");
+         return out;
+       })()+
+     '</div>'+
      '<button class="btn" id="md-save" style="margin-top:12px">'+(ed?'Save changes':'Add a medication')+'</button>'+
      (ed?'<button class="btn ghost" id="md-cancel">Cancel</button>':'')+
      '</div>';
@@ -1864,18 +1952,26 @@ function renderMeds(root){
     var n=document.getElementById("md-name").value.trim(),
         d=document.getElementById("md-date").value,
         u=document.getElementById("md-until").value,
-        nt=document.getElementById("md-note").value.trim();
+        nt=document.getElementById("md-note").value.trim(),
+        tr=document.getElementById("md-treats").value.trim(),
+        tg=[].slice.call(document.querySelectorAll(".md-tgt:checked"))
+              .map(function(c){ return c.value; })
+              .filter(function(v,i,arr){ return arr.indexOf(v)===i; });
     if(!n||!d){ alert("Enter a name and start date."); return; }
     if(u && u<d){ alert("The end date is before the start date."); return; }
     if(!STATE.meds) STATE.meds=[];
     SB.medsDirty=true;
-    if(ed) STATE.meds[MEDEDIT]={name:n,start:d,until:u,note:nt};
-    else   STATE.meds.push({name:n,start:d,until:u,note:nt});
+    var rec={name:n,start:d,until:u,note:nt,treats:tr,targets:tg};
+    if(ed) STATE.meds[MEDEDIT]=rec;
+    else   STATE.meds.push(rec);
     MEDEDIT=null; persist(); render();
     themeToast(ed?"Medication updated":"Medication added");
   };
   var mc=document.getElementById("md-cancel");
   if(mc) mc.onclick=function(){ MEDEDIT=null; render(); };
+  root.querySelectorAll(".tgt input").forEach(function(cb){ cb.onchange=function(){
+    cb.parentNode.classList.toggle("on", cb.checked);
+  }; });
 
   root.querySelectorAll("[data-editmed]").forEach(function(b){ b.onclick=function(){
     MEDEDIT=+b.getAttribute("data-editmed"); render(); window.scrollTo(0,document.body.scrollHeight);
@@ -2172,6 +2268,12 @@ function render(editDate){
     setMedMark(mt.checked);
     render();
     themeToast(MEDMARK ? "Medication markers on" : "Medication markers off");
+  };
+  var mo=root.querySelector("#medonly");
+  if(mo) mo.onchange=function(){
+    setMedOnly(mo.checked);
+    render();
+    themeToast(MEDONLY ? "Markers limited to the tests they target" : "Markers on every chart");
   };
   root.querySelectorAll("[data-watchid]").forEach(function(b){ b.onclick=function(e){
     e.stopPropagation(); e.preventDefault();
