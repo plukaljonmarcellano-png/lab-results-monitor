@@ -26,8 +26,12 @@
   --s0:#34D399; --s0-bg:rgba(52,211,153,.13);
   --s1:#F7CE3E; --s1-bg:rgba(247,206,62,.13);
   --s2:#FF8A2B; --s2-bg:rgba(255,138,43,.20);
-  --s3:#FF5C7A; --s3-bg:rgba(255,92,122,.16);
-  --s4:#FF2D62; --s4-solid:#E11D48; --s4-fg:#FFF1F4;
+  --s3:#F4405F; --s3-bg:rgba(244,64,95,.16);
+  --s4:#FF2D62; --s4-solid:#A5102E; --s4-fg:#FFE8EC;
+  /* zone-bar bubble fills - dark enough for white text in BOTH themes */
+  --b0:#12855C; --b1:#8A6E00; --b2:#C2570A; --b3:#C41F3E; --b4:#7E0A22;
+  /* zone-bar FILLS - identical in both themes; text colours (--sN) are not usable as fills */
+  --f0:#2BB27C; --f1:#EFC02A; --f2:#F07C1E; --f3:#E23A55; --f4:#9E0F2C;
   --r:18px; --r-sm:12px;
 }
 :root[data-theme="light"], :root:not([data-theme="dark"]){}
@@ -44,7 +48,7 @@
     --s1:#8A6B00; --s1-bg:rgba(214,168,0,.20);
     --s2:#C2410C; --s2-bg:rgba(234,88,12,.17);
     --s3:#D62B54; --s3-bg:rgba(214,43,84,.11);
-    --s4:#B00D33; --s4-solid:#B00D33; --s4-fg:#FFFFFF;
+    --s4:#8C0A26; --s4-solid:#8C0A26; --s4-fg:#FFFFFF;
   }
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -121,9 +125,9 @@ header .sub{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:6px;
 }
 .legend .lg{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--fg-2)}
 .legend .sw{width:9px;height:9px;border-radius:3px;flex:none}
-.legend .lg.l0 .sw{background:var(--s0)} .legend .lg.l1 .sw{background:var(--s1)}
-.legend .lg.l2 .sw{background:var(--s2)} .legend .lg.l3 .sw{background:var(--s3)}
-.legend .lg.l4 .sw{background:var(--s4-solid)}
+.legend .lg.l0 .sw{background:var(--f0)} .legend .lg.l1 .sw{background:var(--f1)}
+.legend .lg.l2 .sw{background:var(--f2)} .legend .lg.l3 .sw{background:var(--f3)}
+.legend .lg.l4 .sw{background:var(--f4)}
 .legend .note{flex-basis:100%;font-size:11px;color:var(--fg-3);line-height:1.45;margin-top:2px}
 
 /* ---------- result row + signature gauge ---------- */
@@ -170,6 +174,41 @@ header .sub{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:6px;
 .chip.na{background:var(--panel-2);color:var(--fg-3)}
 .row .val{flex-wrap:wrap}
 @media (max-width:360px){ .chip{font-size:10px;padding:3px 7px} }
+
+/* ---------- zone bar: the track itself carries the severity scale ---------- */
+.zbar{position:relative;height:8px;margin-top:4px}
+.zbar .seg{position:absolute;top:0;bottom:0;border-radius:2px;border-right:2px solid var(--panel);background-clip:padding-box}
+.zbar .seg:last-child{border-right:0}
+.zbar .seg.s0{background:var(--f0)} .zbar .seg.s1{background:var(--f1)}
+.zbar .seg.s2{background:var(--f2)} .zbar .seg.s3{background:var(--f3)}
+.zbar .seg.s4{background:var(--f4)}
+.zbar .mk{
+  position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;
+  background:var(--fg);box-shadow:0 0 0 2px var(--panel),0 1px 3px rgba(0,0,0,.4);
+  transform:translateX(-1.5px);
+}
+.zwrap{position:relative;padding-top:29px}
+.zwrap .zbar{height:12px}
+.zwrap .zbar .seg{border-radius:3px}
+.zwrap .zbar .mk{top:-5px;bottom:-5px;width:4px;transform:translateX(-2px)}
+.zbubble{
+  position:absolute;bottom:calc(100% + 9px);transform:translateX(-50%);
+  font-size:12.5px;font-weight:800;letter-spacing:-.01em;color:#fff;
+  padding:3px 9px;border-radius:8px;white-space:nowrap;
+}
+.zbubble.s0{background:var(--b0)} .zbubble.s1{background:var(--b1)}
+.zbubble.s2{background:var(--b2)} .zbubble.s3{background:var(--b3)}
+.zbubble.s4{background:var(--b4)}
+.zcaret{
+  position:absolute;bottom:calc(100% + 2px);transform:translateX(-50%);
+  width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:0;
+}
+.zcaret.s0{border-top:6px solid var(--b0)} .zcaret.s1{border-top:6px solid var(--b1)}
+.zcaret.s2{border-top:6px solid var(--b2)} .zcaret.s3{border-top:6px solid var(--b3)}
+.zcaret.s4{border-top:6px solid var(--b4)}
+.zticks{position:relative;height:15px;margin-top:5px}
+.zticks span{position:absolute;transform:translateX(-50%);font-size:10.5px;color:var(--fg-3);font-weight:700;white-space:nowrap}
+.zticks span.u{color:var(--fg-3);font-weight:600}
 
 .spark{width:0;height:0;display:none}   /* replaced by the gauge */
 .arrow{font-size:12px;font-weight:700}
@@ -589,29 +628,85 @@ function legendHTML(){
     '<div class="lg l2"><span class="sw"></span>Out of range</div>'+
     '<div class="lg l3"><span class="sw"></span>Marked</div>'+
     '<div class="lg l4"><span class="sw"></span>Critical</div>'+
-    '<div class="note">Colour shows how far a result sits from its reference range, scaled to the width of that range. The label carries the direction. Critical thresholds are general adult alert values, not your laboratory\u2019s own list \u2014 always confirm with your doctor.</div>'+
+    '<div class="note">The bar under each result is the full scale for that test, coloured by how far a value sits from its reference range and scaled to the width of that range. The label carries the direction. Critical thresholds are general adult alert values, not your laboratory\u2019s own list \u2014 always confirm with your doctor.</div>'+
   '</div>';
 }
 function rangeText(a){ if(a.lo!=null&&a.hi!=null&&a.lo!==0) return a.lo+" – "+a.hi+" "+a.unit; if(a.lo!=null&&a.hi!=null) return "≤ "+a.hi+" "+a.unit; if(a.hi!=null) return "< "+a.hi+" "+a.unit; if(a.lo!=null) return "> "+a.lo+" "+a.unit; return a.unit; }
 function series(id){ var out=[]; sortedResults().forEach(function(r){ if(r.values[id]!=null) out.push({date:r.date, v:r.values[id]}); }); return out; }
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
-function gaugeHTML(a,v){
-  var f=sevOf(a,v).cls;
-  var lo=a.lo, hi=a.hi, span, s, e, pos;
-  if(lo!=null && hi!=null){ var w=hi-lo; s=lo-w*0.9; e=hi+w*0.9; }
-  else if(hi!=null){ s=0; e=hi*2.2; }
-  else if(lo!=null){ s=0; e=lo*2.2; }
-  else { return ''; }
-  span=e-s; if(span<=0) return '';
-  function pct(x){ return Math.max(0,Math.min(100,((x-s)/span)*100)); }
-  var bs=pct(lo!=null?lo:s), be=pct(hi!=null?hi:e);
-  var edges='';
-  if(lo!=null) edges+='<div class="edge" style="left:'+bs.toFixed(1)+'%"></div>';
-  if(hi!=null) edges+='<div class="edge" style="left:'+be.toFixed(1)+'%"></div>';
-  return '<div class="gauge '+f+'"><div class="band" style="left:'+bs.toFixed(1)+'%;right:'+(100-be).toFixed(1)+'%"></div>'+
-         edges+'<div class="pin" style="left:'+pct(v).toFixed(1)+'%"></div></div>';
+/* ---- zone model: turn the severity tiers into contiguous bands in value space ---- */
+function zonesOf(a){
+  var lo=a.lo, hi=a.hi;
+  if(lo==null && hi==null) return null;
+  var c=CRIT[a.id]||{};
+  var span=(lo!=null&&hi!=null&&hi>lo)?(hi-lo):null;
+  function U(b){ return span!=null?span:(Math.abs(b)||1); }
+  var uL = lo!=null?U(lo):null, uH = hi!=null?U(hi):null;
+  var uAny = uL!=null?uL:uH;
+  // Critical boundaries. An analyte can carry a panic value on a side that has NO
+  // reference bound (systolic BP has no lower reference but <90 is critical) - sevOf()
+  // honours that, so the bar has to draw it or the bar and the chip would disagree.
+  var critLo = lo!=null ? Math.min(lo, Math.max(c.lo!=null?c.lo:-1e15, lo-SEV_MARKED*uL))
+                        : (c.lo!=null ? c.lo : null);
+  var critHi = hi!=null ? Math.max(hi, Math.min(c.hi!=null?c.hi: 1e15, hi+SEV_MARKED*uH))
+                        : (c.hi!=null ? c.hi : null);
+  var st = critLo!=null ? critLo-(lo!=null?0.30*uL:0.15*uAny) : (hi-0.85*uH);
+  var en = critHi!=null ? critHi+(hi!=null?0.30*uH:0.15*uAny) : (lo+0.85*uL);
+  st = Math.max(0, st);                     // these are all non-negative quantities
+  if(!(en>st)) return null;
+  var segs=[];
+  function add(x,y,cls){ x=Math.max(st,x); y=Math.min(en,y); if(y-x>1e-9) segs.push({a:x,b:y,cls:cls}); }
+  if(lo!=null){
+    // a panic value can sit INSIDE the proportional band; bands must never overlap,
+    // and sevOf() tests the panic value first, so critical wins the boundary
+    var mildLo = Math.max(critLo, lo-SEV_MILD*uL);
+    add(st, critLo, "s4");
+    add(critLo, mildLo, "s3");
+    add(mildLo, lo, "s2");
+    add(lo, lo+SEV_BORDER*uL, "s1");
+  } else if(critLo!=null){
+    add(st, critLo, "s4");                  // panic value only - no graded low band exists
+  }
+  add(lo!=null ? lo+SEV_BORDER*uL : (critLo!=null?critLo:st),
+      hi!=null ? hi-SEV_BORDER*uH : (critHi!=null?critHi:en), "s0");
+  if(hi!=null){
+    var mildHi = Math.min(critHi, hi+SEV_MILD*uH);
+    add(hi-SEV_BORDER*uH, hi, "s1");
+    add(hi, mildHi, "s2");
+    add(mildHi, critHi, "s3");
+    add(critHi, en, "s4");
+  } else if(critHi!=null){
+    add(critHi, en, "s4");
+  }
+  segs.sort(function(x,y){ return x.a-y.a; });
+  return {s:st, e:en, segs:segs};
 }
+
+function zoneBar(a,v,full){
+  var z=zonesOf(a); if(!z) return '';
+  var sv=sevOf(a,v);
+  function P(x){ return Math.max(0, Math.min(100, ((x-z.s)/(z.e-z.s))*100)); }
+  var segs=z.segs.map(function(g){
+    var l=P(g.a), w=P(g.b)-l;
+    if(w<=0) return '';
+    return '<div class="seg '+g.cls+'" style="left:'+l.toFixed(2)+'%;width:'+w.toFixed(2)+'%"></div>';
+  }).join('');
+  var p=P(v);
+  var mk='<div class="mk" style="left:'+p.toFixed(2)+'%"></div>';
+  if(!full) return '<div class="zbar">'+segs+mk+'</div>';
+  var bp=Math.max(8, Math.min(92, p));      // keep the pill on-canvas; the caret keeps true position
+  var bub='<div class="zbubble '+sv.cls+'" style="left:'+bp.toFixed(2)+'%">'+fmtNum(v)+'</div>'+
+          '<div class="zcaret '+sv.cls+'" style="left:'+p.toFixed(2)+'%"></div>';
+  var ticks='';
+  if(a.lo!=null) ticks+='<span style="left:'+P(a.lo).toFixed(2)+'%">'+fmtNum(a.lo)+'</span>';
+  if(a.hi!=null) ticks+='<span style="left:'+P(a.hi).toFixed(2)+'%">'+fmtNum(a.hi)+'</span>';
+  ticks+='<span class="u" style="left:100%;transform:translateX(-100%)">'+esc(a.unit)+'</span>';
+  return '<div class="zwrap"><div class="zbar">'+segs+bub+mk+'</div>'+
+         '<div class="zticks">'+ticks+'</div></div>';
+}
+function gaugeHTML(a,v){ return zoneBar(a,v,false); }
+function gaugeFull(a,v){ return zoneBar(a,v,true); }
 
 function sparkSVG(pts,a){
   if(pts.length<2) return '<svg class="spark"></svg>';
@@ -801,6 +896,7 @@ function renderTrends(root){
     var pts=series(a.id); var cur=pts[pts.length-1]; var sv=sevOf(a,cur.v);
     h+='<div class="card"><h2>'+esc(a.name)+' <span class="chip '+sv.cls+'" style="float:right">'+sv.chip+'</span></h2>'+
        '<div class="note" style="margin:0 0 6px">Ref: '+esc(rangeText(a))+'</div>'+
+       '<div style="margin:2px 0 14px">'+gaugeFull(a,cur.v)+'</div>'+
        '<div class="chartbox">'+bigChartSVG(a)+'</div></div>';
   });
   root.innerHTML=h;
@@ -957,7 +1053,7 @@ function openModal(id){
   var back = SHEET_BACK ? '<button class="btn ghost" id="m-back" style="margin-top:8px">&lsaquo; Back</button>' : '';
   sheetOpen(
     '<h3>'+esc(a.name)+'</h3><div class="rng">Reference '+esc(rangeText(a))+'</div>'+
-    '<div style="margin:-4px 0 18px">'+gaugeHTML(a,pts[pts.length-1].v)+'</div>'+about+
+    '<div style="margin:2px 0 20px">'+gaugeFull(a,pts[pts.length-1].v)+'</div>'+about+
     '<div class="chartbox">'+bigChartSVG(a)+'</div>'+
     '<table class="hist"><tr><th>Date</th><th>Result</th><th>Status</th></tr>'+rows+'</table>'+
     '<button class="btn ghost" id="m-close">Close</button>'+back);
