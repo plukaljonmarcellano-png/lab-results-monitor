@@ -29,9 +29,9 @@
   --s3:#F4405F; --s3-bg:rgba(244,64,95,.16);
   --s4:#FF2D62; --s4-solid:#A5102E; --s4-fg:#FFE8EC;
   /* zone-bar bubble fills - dark enough for white text in BOTH themes */
-  --b0:#12855C; --b1:#8A6E00; --b2:#C2570A; --b3:#C41F3E; --b4:#7E0A22;
+  --b0:#2F7A63; --b1:#7E6A1E; --b2:#9C5C2E; --b3:#97404F; --b4:#6E2A39;
   /* zone-bar FILLS - identical in both themes; text colours (--sN) are not usable as fills */
-  --f0:#2BB27C; --f1:#EFC02A; --f2:#F07C1E; --f3:#E23A55; --f4:#9E0F2C;
+  --f0:#58A98A; --f1:#CBB25C; --f2:#CE854C; --f3:#BC5A6B; --f4:#8A3A4B;
   --r:18px; --r-sm:12px;
 }
 :root[data-theme="light"], :root:not([data-theme="dark"]){}
@@ -628,7 +628,7 @@ function legendHTML(){
     '<div class="lg l2"><span class="sw"></span>Out of range</div>'+
     '<div class="lg l3"><span class="sw"></span>Marked</div>'+
     '<div class="lg l4"><span class="sw"></span>Critical</div>'+
-    '<div class="note">The bar under each result is the full scale for that test, coloured by how far a value sits from its reference range and scaled to the width of that range. The label carries the direction. Critical thresholds are general adult alert values, not your laboratory\u2019s own list \u2014 always confirm with your doctor.</div>'+
+    '<div class="note">Colour shows how far a result sits from its reference range, scaled to the width of that range. Open any test to see the full scale. The label carries the direction. Critical thresholds are general adult alert values, not your laboratory\u2019s own list \u2014 always confirm with your doctor.</div>'+
   '</div>';
 }
 function rangeText(a){ if(a.lo!=null&&a.hi!=null&&a.lo!==0) return a.lo+" – "+a.hi+" "+a.unit; if(a.lo!=null&&a.hi!=null) return "≤ "+a.hi+" "+a.unit; if(a.hi!=null) return "< "+a.hi+" "+a.unit; if(a.lo!=null) return "> "+a.lo+" "+a.unit; return a.unit; }
@@ -705,7 +705,22 @@ function zoneBar(a,v,full){
   return '<div class="zwrap"><div class="zbar">'+segs+bub+mk+'</div>'+
          '<div class="zticks">'+ticks+'</div></div>';
 }
-function gaugeHTML(a,v){ return zoneBar(a,v,false); }
+function gaugeHTML(a,v){
+  var f=sevOf(a,v).cls;
+  var lo=a.lo, hi=a.hi, span, st, en;
+  if(lo!=null && hi!=null){ var w=hi-lo; st=lo-w*0.9; en=hi+w*0.9; }
+  else if(hi!=null){ st=0; en=hi*2.2; }
+  else if(lo!=null){ st=0; en=lo*2.2; }
+  else { return ''; }
+  span=en-st; if(span<=0) return '';
+  function pct(x){ return Math.max(0,Math.min(100,((x-st)/span)*100)); }
+  var bs=pct(lo!=null?lo:st), be=pct(hi!=null?hi:en);
+  var edges='';
+  if(lo!=null) edges+='<div class="edge" style="left:'+bs.toFixed(1)+'%"></div>';
+  if(hi!=null) edges+='<div class="edge" style="left:'+be.toFixed(1)+'%"></div>';
+  return '<div class="gauge '+f+'"><div class="band" style="left:'+bs.toFixed(1)+'%;right:'+(100-be).toFixed(1)+'%"></div>'+
+         edges+'<div class="pin" style="left:'+pct(v).toFixed(1)+'%"></div></div>';
+}
 function gaugeFull(a,v){ return zoneBar(a,v,true); }
 
 function sparkSVG(pts,a){
