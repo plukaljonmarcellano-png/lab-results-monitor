@@ -518,6 +518,22 @@ svg[data-pts]{touch-action:pan-y}
   color:var(--fg-2);font-size:19px;line-height:1;cursor:pointer;font-family:inherit;
 }
 .srch .clr:hover{background:var(--line);color:var(--fg)}
+.trtools{display:flex;align-items:center;gap:12px;margin:2px 0 12px;flex-wrap:wrap}
+.trtools .btn{flex:1 1 180px;margin:0}
+.tog{display:inline-flex;align-items:center;gap:9px;cursor:pointer;user-select:none;flex:0 0 auto}
+.tog input{position:absolute;opacity:0;width:0;height:0}
+.tog .sw{
+  width:40px;height:23px;border-radius:99px;background:var(--line-2);position:relative;
+  transition:background .18s;flex:none;
+}
+.tog .sw:after{
+  content:"";position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(2,8,9,.35);transition:transform .18s;
+}
+.tog input:checked + .sw{background:var(--cy)}
+.tog input:checked + .sw:after{transform:translateX(17px)}
+.tog input:focus-visible + .sw{box-shadow:0 0 0 3px rgba(0,168,158,.28)}
+.tog .tl{font-size:13px;font-weight:700;color:var(--fg-2)}
 .alsohd{
   font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
   color:var(--fg-3);margin:16px 0 2px;padding-top:11px;border-top:1px solid var(--line);
@@ -1024,7 +1040,7 @@ function deltaArrow(a,pts){
 
 function bigChartSVG(a){
   var pts=series(a.id);
-  var nmed=(STATE.meds||[]).filter(function(md){return md.start;}).length;
+  var nmed=MEDMARK ? (STATE.meds||[]).filter(function(md){return md.start;}).length : 0;
   var W=680,H=258+(nmed>1?(nmed-1)*17:0),PL=48,PR=16,PT=16,PB=44;
   var vs=pts.map(function(p){return p.v;});
   var mn=Math.min.apply(null,vs.concat(a.lo!=null?[a.lo]:[])), mx=Math.max.apply(null,vs.concat(a.hi!=null?[a.hi]:[]));
@@ -1045,7 +1061,7 @@ function bigChartSVG(a){
      knowing how many rows they take lets the plot start below them rather
      than underneath them. */
   var medPlan=[], medRows=0;
-  (function(){
+  if(MEDMARK) (function(){
     var placed=[];
     (STATE.meds||[]).forEach(function(md){
       if(!md.start || pts.length<2 || span<=0) return;
@@ -1277,7 +1293,8 @@ function renderTrends(root){
   var h=searchBox("Search tests \u2014 name, category, or what it measures");
   // While searching, the category chips would fight the query. Hide them.
   if(!q) h+='<div class="chiprow">'+cats.map(function(c){return '<button data-cat="'+esc(c)+'" class="'+(c===TRENDCAT?"on":"")+'">'+esc(c)+'</button>';}).join("")+'</div>';
-  h+='<button class="btn" id="tr-pdf" style="margin:2px 0 12px">Export these trends</button>';
+  h+='<div class="trtools">'+medToggle()+
+       '<button class="btn" id="tr-pdf">Export these trends</button></div>';
   var list = q ? searchHits(q).map(function(x){ return x.a; })
                : STATE.analytes.filter(function(a){
                    return series(a.id).length && (TRENDCAT==="All"||a.cat===TRENDCAT); });
@@ -1380,6 +1397,11 @@ function renderData(root){
      '</div>'+
      '<div class="note" style="margin:2px 0 0">System follows your phone or computer\u2019s own light/dark setting. '+
      'Also on the button at the top right of every screen. Saved on this device only.</div></div>';
+  h+='<div class="card"><h2>Charts</h2>'+medToggle()+
+     '<div class="note" style="margin:10px 0 0">Medication markers draw a dashed line on every trend chart '+
+     'at the date each medication started, so you can see what changed and when. With five medications that '+
+     'is five rows of labels above every chart \u2014 turn them off to give the space back to the line. '+
+     'Saved on this device only.</div></div>';
   var nLab=0, nVit=0;
   rs.forEach(function(r){ if(reportKind(r)==="lab") nLab++; else nVit++; });
   var shown = rs.filter(function(r){
@@ -1573,6 +1595,17 @@ function reportKind(r){                       // "lab" if it holds anything a la
   return ks.some(function(k){ return !isSelfMeasured(k); }) ? "lab" : "vitals";
 }
 var MEDEDIT=null;                             // index of the medication being edited
+var MEDMARK = true;                           // medication marker lines on charts
+try{ MEDMARK = localStorage.getItem("labmon-medmark") !== "0"; }catch(e){}
+function setMedMark(on){
+  MEDMARK = !!on;
+  try{ localStorage.setItem("labmon-medmark", MEDMARK ? "1" : "0"); }catch(e){}
+}
+function medToggle(){
+  return '<label class="tog"><input type="checkbox" id="medtog"'+(MEDMARK?" checked":"")+'>'+
+         '<span class="sw"></span><span class="tl">Medication markers</span></label>';
+}
+
 var SEARCH="";                                // transient: never persisted
 var ALIAS = {
   sugar:"hba1c eag homair", diabetes:"hba1c eag homair", diabetic:"hba1c eag homair",
@@ -2004,6 +2037,12 @@ function render(editDate){
     applyProfileRanges();     // sex may have changed which limits apply
     persist(); render();
     themeToast("Profile saved");
+  };
+  var mt=root.querySelector("#medtog");
+  if(mt) mt.onchange=function(){
+    setMedMark(mt.checked);
+    render();
+    themeToast(MEDMARK ? "Medication markers on" : "Medication markers off");
   };
   root.querySelectorAll("[data-repfilter]").forEach(function(b){ b.onclick=function(){
     REPFILTER=b.getAttribute("data-repfilter");
