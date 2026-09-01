@@ -1,5 +1,5 @@
 /* Offline shell for Lab Results Monitor. Data always comes from Supabase over the network. */
-var CACHE = "labmon-v7-nowipe";
+var CACHE = "labmon-v8-acr";
 var SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", function(e){
