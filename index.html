@@ -647,6 +647,19 @@ var STAGED = {
   gfr:  {src:"Stages: KDIGO CKD categories G1-G5.",
          bands:[{to:15,lvl:4,dir:"lo"},{to:45,lvl:3,dir:"lo"},{to:60,lvl:2,dir:"lo"},
                 {to:90,lvl:1,dir:"lo"},{to:null,lvl:0}]},
+  tc:   {src:"Wording and cut-offs as printed on your Al Salama report (adult scale). The band above 320 is this app\u2019s own escalation \u2014 the lab defines no tier above \u201chigh\u201d.",
+         bands:[{to:200,lvl:0},{to:240,lvl:1,dir:"hi",label:"BORDERLINE"},
+                {to:320,lvl:2,dir:"hi",label:"HIGH"},{to:null,lvl:3,dir:"hi",label:"HIGH"}]},
+  tg:   {src:"Wording and cut-offs as printed on your Al Salama report. Above 1000 is treated as critical here because of pancreatitis risk; the lab defines no tier that high.",
+         bands:[{to:150,lvl:0},{to:200,lvl:1,dir:"hi",label:"BORDERLINE HIGH"},
+                {to:500,lvl:2,dir:"hi",label:"HIGH"},{to:1000,lvl:3,dir:"hi",label:"VERY HIGH"},
+                {to:null,lvl:4,dir:"hi",label:"VERY HIGH"}]},
+  ldl:  {src:"Wording and cut-offs as printed on your Al Salama report. These are long-term cardiac-risk tiers, not urgent ones, so even \u201cvery high\u201d is not flagged critical.",
+         bands:[{to:100,lvl:0,label:"OPTIMAL"},{to:130,lvl:1,dir:"hi",label:"NEAR OPTIMAL"},
+                {to:160,lvl:2,dir:"hi",label:"BORDERLINE HIGH"},{to:190,lvl:3,dir:"hi",label:"HIGH"},
+                {to:null,lvl:3,dir:"hi",label:"VERY HIGH"}]},
+  hdl:  {src:"Your lab reports only \u201cover 60\u201d. Stages here follow NCEP ATP III, where under 40 in men is itself a cardiac risk factor and 60+ is protective.",
+         bands:[{to:40,lvl:3,dir:"lo"},{to:60,lvl:2,dir:"lo"},{to:null,lvl:0}]},
   vitd: {src:"Stages: Endocrine Society - under 20 deficient, 20-29 insufficient, over 150 toxic.",
          bands:[{to:10,lvl:4,dir:"lo"},{to:20,lvl:3,dir:"lo"},{to:30,lvl:2,dir:"lo"},
                 {to:100,lvl:0},{to:150,lvl:2,dir:"hi"},{to:null,lvl:4,dir:"hi"}]}
@@ -665,7 +678,11 @@ function sevOf(a,v){
   if(stg){
     for(var bi=0; bi<stg.bands.length; bi++){
       var bd=stg.bands[bi];
-      if(bd.to==null || v<bd.to) return mk(bd.lvl, bd.dir||null, null, bd.lvl===4);
+      if(bd.to==null || v<bd.to){
+        var r=mk(bd.lvl, bd.dir||null, null, bd.lvl===4);
+        if(bd.label) r.chip=bd.label;          // use the lab's term where it has one
+        return r;
+      }
     }
   }
   if(c.lo!=null && v<c.lo) return mk(4,"lo",null,true);
