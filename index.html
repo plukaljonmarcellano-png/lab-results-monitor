@@ -377,6 +377,14 @@ label{font-size:12px;font-weight:700;color:var(--fg-2);display:block;margin:12px
 .catall{
   display:flex;gap:8px;margin:-2px 0 12px;
 }
+.grouphd{
+  display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;
+  font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--fg-2);margin:18px 2px 9px;
+}
+.grouphd span{
+  font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--fg-3);
+}
 .catall button{
   flex:1;background:var(--panel);border:1px solid var(--line);color:var(--fg-2);
   border-radius:var(--r-sm);padding:9px 10px;font-size:12px;font-weight:700;
@@ -391,6 +399,11 @@ label{font-size:12px;font-weight:700;color:var(--fg-2);display:block;margin:12px
 .datecard>div:last-child{flex:0 0 auto;display:flex;gap:6px;align-items:center}
 .datecard:last-child{border-bottom:none}
 .datecard b{font-size:15px;font-weight:700}
+.datecard .kind{
+  display:inline-block;margin-left:7px;padding:1px 7px;border-radius:99px;vertical-align:2px;
+  background:var(--panel-2);border:1px solid var(--line);color:var(--fg-3);
+  font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+}
 .datecard span{font-size:12px;color:var(--fg-3);display:block;margin-top:2px}
 .mini-btn{padding:8px 13px;border-radius:10px;border:1px solid var(--line-2);background:none;color:var(--fg);font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;flex:none}
 @media (max-width:380px){ .mini-btn{padding:8px 10px;font-size:12px} }
@@ -1096,9 +1109,17 @@ function renderDash(root){
   }
   var cats=[]; STATE.analytes.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
   h+='<div class="catall"><button id="cat-open">Expand all</button><button id="cat-shut">Collapse all</button></div>';
+  var groupShown={};
   cats.forEach(function(c){
     var list=STATE.analytes.filter(function(a){return a.cat===c && series(a.id).length;});
     if(!list.length) return;
+    var grp = SELF_CATS[c] ? "self" : "lab";
+    if(!groupShown[grp]){
+      groupShown[grp]=1;
+      h+='<div class="grouphd">'+(grp==="self"
+          ? 'Measured at home <span>you and your devices</span>'
+          : 'Laboratory <span>drawn and run by a lab</span>')+'</div>';
+    }
     // summarise what is inside so the header carries the signal without being opened
     var nOut=0, nBord=0;
     list.forEach(function(a){
@@ -1224,11 +1245,22 @@ function renderData(root){
      '</div>'+
      '<div class="note" style="margin:2px 0 0">System follows your phone or computer\u2019s own light/dark setting. '+
      'Also on the button at the top right of every screen. Saved on this device only.</div></div>';
-  h+='<div class="card"><h2>Your reports ('+rs.length+')</h2>';
-  if(!rs.length) h+='<div class="empty">Nothing saved yet.</div>';
-  rs.forEach(function(r){
+  var nLab=0, nVit=0;
+  rs.forEach(function(r){ if(reportKind(r)==="lab") nLab++; else nVit++; });
+  var shown = rs.filter(function(r){
+    return REPFILTER==="all" || reportKind(r)===REPFILTER;
+  });
+  h+='<div class="card"><h2>Your reports ('+shown.length+')</h2>'+
+     '<div class="seg" style="margin:-2px 0 4px">'+
+       [["all","All",rs.length],["lab","Lab reports",nLab],["vitals","Vitals",nVit]].map(function(o){
+         return '<button data-repfilter="'+o[0]+'" class="'+(o[0]===REPFILTER?'on':'')+'">'+o[1]+' ('+o[2]+')</button>';
+       }).join('')+
+     '</div>';
+  if(!shown.length) h+='<div class="empty">Nothing here.</div>';
+  shown.forEach(function(r){
     var n=Object.keys(r.values).length;
-    h+='<div class="datecard" data-report="'+r.date+'"><div><b>'+fmtDate(r.date)+'</b><span>'+n+' tests'+(r.lab?" · "+esc(r.lab):"")+' &middot; tap to view</span></div>'+
+    var kindTag = reportKind(r)==="vitals" ? '<span class="kind">vitals</span>' : '';
+    h+='<div class="datecard" data-report="'+r.date+'"><div><b>'+fmtDate(r.date)+'</b>'+kindTag+'<span>'+n+' test'+(n===1?'':'s')+(r.lab?" · "+esc(r.lab):"")+' &middot; tap to view</span></div>'+
        '<div><button class="mini-btn" data-edit="'+r.date+'">Edit</button><button class="mini-btn del" data-del="'+r.date+'">Delete</button></div></div>';
   });
   h+='</div>';
@@ -1397,6 +1429,16 @@ function applyTheme(t){
 var CATOPEN = {};
 try{ CATOPEN = JSON.parse(localStorage.getItem("labmon-cats")||"{}") || {}; }catch(e){ CATOPEN={}; }
 function catSave(){ try{ localStorage.setItem("labmon-cats", JSON.stringify(CATOPEN)); }catch(e){} }
+
+var SELF_CATS = { "Vitals":1, "Body Composition":1 };
+function isSelfMeasured(id){ var a=byId[id]; return !!(a && SELF_CATS[a.cat]); }
+function reportKind(r){                       // "lab" if it holds anything a laboratory ran
+  var ks=Object.keys(r.values||{});
+  if(!ks.length) return "lab";
+  return ks.some(function(k){ return !isSelfMeasured(k); }) ? "lab" : "vitals";
+}
+var REPFILTER="all";
+try{ REPFILTER = localStorage.getItem("labmon-repfilter")||"all"; }catch(e){}
 
 function persist(){ SB.save(); }
 
@@ -1708,6 +1750,11 @@ function render(editDate){
     persist(); render();
     themeToast("Profile saved");
   };
+  root.querySelectorAll("[data-repfilter]").forEach(function(b){ b.onclick=function(){
+    REPFILTER=b.getAttribute("data-repfilter");
+    try{ localStorage.setItem("labmon-repfilter",REPFILTER); }catch(e){}
+    render();
+  }; });
   root.querySelectorAll("[data-theme-set]").forEach(function(b){ b.onclick=function(){
     var t=b.getAttribute("data-theme-set");
     applyTheme(t); themeToast("Appearance: "+THEME_NAME[t]); render(); }; });
