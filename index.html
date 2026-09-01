@@ -518,6 +518,32 @@ svg[data-pts]{touch-action:pan-y}
   color:var(--fg-2);font-size:19px;line-height:1;cursor:pointer;font-family:inherit;
 }
 .srch .clr:hover{background:var(--line);color:var(--fg)}
+/* ".row .nm span" is (0,2,1) and would otherwise beat ".star.on" at (0,2,0),
+   which greys out a star rendered as a span rather than a button. Name the
+   container in the star's own rules so it wins wherever it is used. */
+.star, .nm .star{
+  background:none;border:none;padding:0 7px 0 0;margin:0;cursor:pointer;font-family:inherit;
+  font-size:16px;line-height:1;color:var(--fg-3);vertical-align:-1px;
+  transition:color .15s, transform .12s;
+}
+.star:hover, .nm .star:hover{color:var(--fg-2);transform:scale(1.14)}
+.star.on, .nm .star.on{color:#e0a92a}
+.star.on:hover, .nm .star.on:hover{color:#c9941c}
+span.star{cursor:default}                 /* read-only marker, not a control */
+h3 .star{font-size:19px;padding-right:9px}
+.cat h2 .star{font-size:15px;padding-right:8px;flex:none}
+
+.watchcard{border-left:3px solid #e0a92a}
+.watchcard h2{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.watchcard .wstar{color:#e0a92a;font-size:15px}
+.watchcard .wmeta{
+  margin-left:auto;font-size:12px;font-weight:700;color:var(--fg-3);
+  letter-spacing:0;text-transform:none;
+}
+.watchcard .wmeta b{font-weight:800}
+.watchcard .wmeta .bad{color:var(--s3)}
+.watchcard .wmeta .good{color:var(--s0)}
+
 .trtools{display:flex;align-items:center;gap:12px;margin:2px 0 12px;flex-wrap:wrap}
 .trtools .btn{flex:1 1 180px;margin:0}
 .tog{display:inline-flex;align-items:center;gap:9px;cursor:pointer;user-select:none;flex:0 0 auto}
@@ -584,7 +610,8 @@ var SUPABASE_KEY = "sb_publishable_ZmHevYIdUQyhJVjDQQ8aLw_dllQ_3Xe";
 
 var DEFAULT_ANALYTES = [{"id":"wt","name":"Weight","cat":"Body Composition","unit":"kg","lo":null,"hi":null,"desc":"Your body weight. Weight change is often the main driver behind improvements in liver fat, blood sugar and triglycerides.","hint":"Log it any day — no lab visit needed. Weigh at the same time of day for consistency."},{"id":"sys","name":"Blood Pressure (systolic)","cat":"Vitals","unit":"mmHg","lo":null,"hi":130,"lowerBetter":true,"desc":"The upper blood pressure number — pressure while your heart beats. This is what blood-pressure medication targets.","hint":"Commonly targeted under 130. Sit quietly 5 minutes before measuring."},{"id":"dia","name":"Blood Pressure (diastolic)","cat":"Vitals","unit":"mmHg","lo":null,"hi":80,"lowerBetter":true,"desc":"The lower blood pressure number — pressure while your heart rests between beats.","hint":"Commonly targeted under 80."},{"id":"wbc","name":"WBC","cat":"Hematology (CBC)","unit":"×10³/µL","lo":3.9,"hi":10.2,"desc":"White blood cells — your infection-fighting cells.","hint":"Rises with infection or inflammation."},{"id":"rbc","name":"RBC","cat":"Hematology (CBC)","unit":"×10⁶/µL","lo":4.3,"hi":5.75,"desc":"Red blood cells — they carry oxygen around your body.","hint":"Low can mean anemia."},{"id":"hct","name":"Hematocrit (HCT)","cat":"Hematology (CBC)","unit":"%","lo":39.5,"hi":50.5,"desc":"The percentage of your blood made up of red cells.","hint":"Low suggests anemia."},{"id":"hgb","name":"Hemoglobin (HGB)","cat":"Hematology (CBC)","unit":"g/dL","lo":13.5,"hi":17.2,"desc":"Hemoglobin — the protein in red cells that actually holds the oxygen.","hint":"Low means anemia; this is the key anemia number."},{"id":"mcv","name":"MCV","cat":"Hematology (CBC)","unit":"fL","lo":80,"hi":99,"desc":"Average size of your red blood cells.","hint":"Helps identify what type of anemia, if any."},{"id":"mch","name":"MCH","cat":"Hematology (CBC)","unit":"pg","lo":27,"hi":33.5,"desc":"Average amount of hemoglobin inside each red cell.","hint":"Read alongside MCV."},{"id":"mchc","name":"MCHC","cat":"Hematology (CBC)","unit":"g/dL","lo":31.5,"hi":36,"desc":"How concentrated the hemoglobin is inside your red cells.","hint":"Read alongside MCV and MCH."},{"id":"rdw","name":"RDW","cat":"Hematology (CBC)","unit":"%","lo":11.8,"hi":14.5,"desc":"How much your red cells vary in size.","hint":"High can be an early hint of anemia."},{"id":"plt","name":"Platelets","cat":"Hematology (CBC)","unit":"×10³/µL","lo":150,"hi":450,"desc":"Platelets — the cells that make your blood clot.","hint":"Too low risks bleeding; too high risks clotting."},{"id":"mpv","name":"MPV","cat":"Hematology (CBC)","unit":"fL","lo":9.2,"hi":12.7,"desc":"Average size of your platelets.","hint":"Supporting detail for the platelet count."},{"id":"neut","name":"Neutrophils (abs)","cat":"Differential Count","unit":"×10³/µL","lo":1.5,"hi":7.7,"desc":"Neutrophils — the white cells that fight bacterial infection.","hint":"Rise sharply with bacterial infection."},{"id":"lymph","name":"Lymphocytes (abs)","cat":"Differential Count","unit":"×10³/µL","lo":1.1,"hi":4.5,"desc":"Lymphocytes — the white cells that fight viruses.","hint":"Rise with viral infection."},{"id":"mono","name":"Monocytes (abs)","cat":"Differential Count","unit":"×10³/µL","lo":0.1,"hi":0.9,"desc":"Monocytes — white cells that clean up damaged tissue.","hint":"Mildly high is common and often not significant."},{"id":"eos","name":"Eosinophils (abs)","cat":"Differential Count","unit":"×10³/µL","lo":0.02,"hi":0.5,"desc":"Eosinophils — white cells linked to allergy and parasites.","hint":"High suggests allergy or parasitic infection."},{"id":"baso","name":"Basophils (abs)","cat":"Differential Count","unit":"×10³/µL","lo":0,"hi":0.2,"desc":"Basophils — the rarest white cells, involved in allergic reactions.","hint":"Rarely significant on its own."},{"id":"tc","name":"Total Cholesterol","cat":"Lipid Profile","unit":"mg/dL","lo":null,"hi":200,"lowerBetter":true,"desc":"Total cholesterol — all the cholesterol in your blood added together.","hint":"Lower is better."},{"id":"tg","name":"Triglycerides","cat":"Lipid Profile","unit":"mg/dL","lo":null,"hi":150,"lowerBetter":true,"desc":"Triglycerides — fat circulating in your blood, strongly affected by diet, alcohol and blood sugar.","hint":"Lower is better."},{"id":"hdl","name":"HDL Cholesterol","cat":"Lipid Profile","unit":"mg/dL","lo":60,"hi":null,"higherBetter":true,"desc":"HDL — the 'good' cholesterol that clears fat out of your arteries.","hint":"Higher is better."},{"id":"ldl","name":"LDL Cholesterol","cat":"Lipid Profile","unit":"mg/dL","lo":null,"hi":100,"lowerBetter":true,"desc":"LDL — the 'bad' cholesterol that builds up in artery walls.","hint":"Lower is better."},{"id":"alt","name":"SGPT (ALT)","cat":"Liver","unit":"U/L","lo":0,"hi":55,"lowerBetter":true,"desc":"ALT — an enzyme inside liver cells. It leaks into the blood when liver cells are irritated or damaged.","hint":"Lower is better; this is a main liver marker."},{"id":"ast","name":"SGOT (AST)","cat":"Liver","unit":"U/L","lo":0,"hi":40,"lowerBetter":true,"desc":"AST — another liver-cell enzyme, also found in muscle.","hint":"Lower is better; read together with ALT."},{"id":"alp","name":"Alkaline Phosphatase","cat":"Liver","unit":"U/L","lo":40,"hi":129,"desc":"Alkaline phosphatase — an enzyme from the liver's bile ducts and from bone.","hint":"High can point to bile-duct or bone issues."},{"id":"ggt","name":"GGT","cat":"Liver","unit":"U/L","lo":0,"hi":55,"lowerBetter":true,"desc":"GGT — a liver enzyme that is especially sensitive to alcohol and bile-duct problems.","hint":"Lower is better."},{"id":"crea","name":"Creatinine","cat":"Renal","unit":"mg/dL","lo":0.6,"hi":1.2,"desc":"Creatinine — muscle waste that healthy kidneys filter out.","hint":"High suggests the kidneys aren't filtering well."},{"id":"gfr","name":"GFR (est.)","cat":"Renal","unit":"mL/min","lo":60,"hi":null,"higherBetter":true,"desc":"GFR — an estimate of how much blood your kidneys filter per minute. The overall kidney score.","hint":"Higher is better; above 60 is normal."},{"id":"ua","name":"Uric Acid","cat":"Renal","unit":"mg/dL","lo":3.7,"hi":7.7,"desc":"Uric acid — waste from breaking down purines in food.","hint":"High can cause gout."},{"id":"crp","name":"CRP","cat":"Inflammation & Other","unit":"mg/dL","lo":0,"hi":0.5,"lowerBetter":true,"desc":"C-reactive protein — a general marker of inflammation anywhere in the body.","hint":"Lower is better."},{"id":"cas","name":"Calcium (Serum)","cat":"Inflammation & Other","unit":"mg/dL","lo":8.6,"hi":10,"desc":"Total calcium in your blood — important for bones, nerves, muscles and heart rhythm.","hint":"Tracked separately from Corrected Calcium, which is adjusted for protein levels."},{"id":"ca","name":"Corrected Calcium","cat":"Inflammation & Other","unit":"mg/dL","lo":8.5,"hi":10.5,"desc":"Corrected calcium — calcium in your blood, adjusted for protein levels.","hint":"Matters for bones, nerves and heart rhythm."},{"id":"ferr","name":"Ferritin","cat":"Inflammation & Other","unit":"ng/mL","lo":21.8,"hi":274.6,"desc":"Ferritin — your stored iron. It also rises with inflammation or liver irritation, so a high value isn't always about iron.","hint":"High needs a cause identified."},{"id":"tsh","name":"TSH","cat":"Hormones & Vitamins","unit":"µIU/mL","lo":0.3,"hi":4.2,"desc":"TSH — the hormone that tells your thyroid how hard to work. The main thyroid screening test.","hint":"High suggests underactive thyroid, low suggests overactive."},{"id":"b12","name":"Vitamin B12","cat":"Hormones & Vitamins","unit":"pg/mL","lo":187,"hi":883,"desc":"Vitamin B12 — needed for nerves and for making red blood cells.","hint":"Low causes fatigue and nerve symptoms."},{"id":"vitd","name":"Vitamin D (25-OH)","cat":"Hormones & Vitamins","unit":"ng/mL","lo":30,"hi":100,"desc":"Vitamin D — needed for bone health and immune function.","hint":"Low is very common; below 30 is deficient."},{"id":"bun","name":"Blood Urea Nitrogen (BUN)","cat":"Renal","unit":"mg/dL","lo":8.9,"hi":20.6,"desc":"Blood urea nitrogen — protein waste the kidneys clear.","hint":"Read together with creatinine."},{"id":"na","name":"Sodium (Na)","cat":"Electrolytes","unit":"mmol/L","lo":136,"hi":145,"desc":"Sodium — a salt that controls fluid balance in your body.","hint":"Kept in a tight range by the kidneys."},{"id":"k","name":"Potassium (K)","cat":"Electrolytes","unit":"mmol/L","lo":3.5,"hi":5.1,"desc":"Potassium — a salt essential for heart rhythm and muscle function.","hint":"Both high and low are dangerous for the heart."},{"id":"cl","name":"Chloride (Cl)","cat":"Electrolytes","unit":"mmol/L","lo":98,"hi":107,"desc":"Chloride — a salt that works alongside sodium.","hint":"Read with the other electrolytes."},{"id":"trop","name":"Troponin HS","cat":"Cardiac","unit":"pg/mL","lo":null,"hi":34.2,"lowerBetter":true,"desc":"Troponin — a protein released when heart muscle is damaged. Used to rule out a heart attack.","hint":"Should be low; a normal result is reassuring."},{"id":"ddimer","name":"D-Dimer (Quant.)","cat":"Cardiac","unit":"µg/mL","lo":null,"hi":0.5,"lowerBetter":true,"desc":"D-dimer — a fragment left behind when a blood clot dissolves. Used to rule out clots in the legs or lungs.","hint":"A normal result largely rules out a clot."},{"id":"hba1c","name":"HbA1c","cat":"Glycemic Control","unit":"%","lo":null,"hi":5.7,"lowerBetter":true,"desc":"HbA1c — your average blood sugar over roughly the past 3 months, in one number.","hint":"Under 5.7 is normal, 5.7–6.4 is prediabetes, 6.5+ is diabetes."},{"id":"eag","name":"Estimated Avg. Glucose (eAG)","cat":"Glycemic Control","unit":"mg/dL","lo":null,"hi":117,"lowerBetter":true,"desc":"Estimated average glucose — the same HbA1c result expressed as a daily blood-sugar number.","hint":"Lower is better."},{"id":"homair","name":"HOMA-IR","cat":"Glycemic Control","unit":"index","lo":null,"hi":1.9,"lowerBetter":true,"desc":"HOMA-IR — how hard your body has to work to keep blood sugar under control (insulin resistance).","hint":"Under 1.0 is insulin-sensitive; above 2.9 is significant resistance."},{"id":"acr","name":"Albumin/Creatinine Ratio","cat":"Renal","unit":"mg/g","lo":null,"hi":30,"lowerBetter":true,"desc":"Albumin/creatinine ratio — measures protein leaking into your urine, which shouldn't normally happen.","hint":"Lower is better; an early kidney-damage warning."},{"id":"bmi","name":"BMI","cat":"Body Composition","unit":"","lo":18.5,"hi":25,"lowerBetter":true,"desc":"Body mass index — your weight scaled to your height, in one number.","hint":"A rough screen, not a verdict: it cannot tell muscle from fat."},{"id":"bf","name":"Body Fat","cat":"Body Composition","unit":"%","lo":null,"hi":25,"lowerBetter":true,"desc":"The share of your body weight that is fat, estimated by the scale passing a small current through you.","hint":"A bioimpedance estimate, not a measurement — it shifts with hydration, so trust the trend over any single reading."},{"id":"mm","name":"Muscle Mass","cat":"Body Composition","unit":"kg","lo":null,"hi":null,"higherBetter":true,"desc":"Estimated weight of muscle in your body.","hint":"Worth watching while losing weight — the aim is to lose fat and keep this steady."}];
 
-var STATE = { analytes: DEFAULT_ANALYTES, analytesRaw: DEFAULT_ANALYTES, results: [], meds: [], profile: {} };
+var STATE = { analytes: DEFAULT_ANALYTES, analytesRaw: DEFAULT_ANALYTES, results: [], meds: [],
+              profile: {}, watch: { cats:[], ids:[] } };
 var byId = {};
 /* Reference limits that depend on who you are. Applied to a working copy so the
    canonical set (analytesRaw) is what gets saved - changing your profile must never
@@ -618,7 +645,7 @@ var SB = {
     return Promise.all([
       sb.from("lab_reports").select("taken_on,lab,values").order("taken_on"),
       sb.from("medications").select("name,started_on,until_on,note").order("started_on"),
-      sb.from("app_settings").select("analytes,profile").maybeSingle()
+      sb.from("app_settings").select("analytes,profile,watch").maybeSingle()
     ]).then(function(r){
       if(r[0].error) throw r[0].error;
       if(r[1].error) throw r[1].error;
@@ -632,6 +659,8 @@ var SB = {
         STATE.analytesRaw = r[2].data.analytes;
       }
       STATE.profile = (r[2] && r[2].data && r[2].data.profile) || {};
+      var w = (r[2] && r[2].data && r[2].data.watch) || {};
+      STATE.watch = { cats: w.cats || [], ids: w.ids || [] };
       applyProfileRanges();
       SB.pendingDeletes = []; SB.medsDirty = false;
       busy(false);
@@ -681,7 +710,8 @@ var SB = {
       .then(function(res){
         if(res && res.error) throw res.error;
         return sb.from("app_settings").upsert(
-          { analytes:STATE.analytesRaw, profile:STATE.profile||{} }, { onConflict:"user_id" });
+          { analytes:STATE.analytesRaw, profile:STATE.profile||{},
+            watch:STATE.watch||{cats:[],ids:[]} }, { onConflict:"user_id" });
       })
       .then(function(){
         self.saving = false; busy(false);
@@ -838,6 +868,14 @@ var STAGED = {
                 {to:null,lvl:3,dir:"hi",label:"VERY HIGH"}]},
   hdl:  {src:"Your lab reports only \u201cover 60\u201d. Stages here follow NCEP ATP III, where under 40 in men is itself a cardiac risk factor and 60+ is protective.",
          bands:[{to:40,lvl:3,dir:"lo"},{to:60,lvl:2,dir:"lo"},{to:null,lvl:0}]},
+  homair:{src:"Bands as printed on your Al Salama report: under 1.0 insulin-sensitive, over 1.9 early "+
+              "insulin resistance, over 2.9 significant insulin resistance. The lab defines no tier above "+
+              "that, so anything higher is still shown as significant \u2014 the label stops, the number "+
+              "does not. HOMA-IR is calculated from fasting insulin and fasting glucose, so it is only "+
+              "meaningful on a properly fasted sample.",
+          bands:[{to:1.0,lvl:0,label:"INSULIN SENSITIVE"},{to:1.9,lvl:1,dir:"hi"},
+                 {to:2.9,lvl:2,dir:"hi",label:"EARLY RESISTANCE"},
+                 {to:null,lvl:3,dir:"hi",label:"SIGNIFICANT RESISTANCE"}]},
   vitd: {src:"Stages: Endocrine Society - under 20 deficient, 20-29 insufficient, over 150 toxic.",
          bands:[{to:10,lvl:4,dir:"lo"},{to:20,lvl:3,dir:"lo"},{to:30,lvl:2,dir:"lo"},
                 {to:100,lvl:0},{to:150,lvl:2,dir:"hi"},{to:null,lvl:4,dir:"hi"}]}
@@ -1183,7 +1221,8 @@ function analyteRow(a, asOf){
   var cur=pts[pts.length-1];
   var stale = (asOf && cur.date!==asOf) ? '<span class="stale">'+fmtDate(cur.date)+'</span>' : '';
   return '<div class="row" data-open="'+a.id+'">'+
-    '<div class="nm"><b>'+esc(a.name)+(a.desc?'<span class="q">?</span>':'')+'</b><span>'+esc(rangeText(a))+stale+'</span></div>'+
+    '<div class="nm"><b>'+starBtn("id",a.id,isWatchedId(a.id))+esc(a.name)+
+      (a.desc?'<span class="q">?</span>':'')+'</b><span>'+esc(rangeText(a))+stale+'</span></div>'+
     '<div class="val"><span>'+deltaArrow(a,pts)+'</span><b>'+fmtNum(cur.v)+'</b>'+
       sevChip(a,cur.v)+'</div>'+
     gaugeHTML(a,cur.v)+'</div>';
@@ -1242,6 +1281,32 @@ function renderDash(root){
     '<div class="kpi s1" data-kpi="bord"><div class="n">'+counts.bord+'</div><div class="l">Borderline</div></div>'+
     '<div class="kpi s3" data-kpi="out"><div class="n">'+counts.out+'</div><div class="l">Out of range</div></div></div>';
   h+=legendHTML();
+
+  var wl=watchedAnalytes();
+  if(wl.length){
+    var wOut=0, wBord=0;
+    wl.forEach(function(a){
+      var L=sevOf(a, series(a.id).slice(-1)[0].v).lvl;
+      if(L>=2) wOut++; else if(L===1) wBord++;
+    });
+    var wsum = wOut  ? '<b class="bad">'+wOut+' out of range</b>'
+             : wBord ? wBord+' borderline'
+                     : '<b class="good">all within range</b>';
+    // most severe first, so the card answers its own question at a glance
+    var wsorted=wl.slice().sort(function(x,y){
+      var sx=sevOf(x, series(x.id).slice(-1)[0].v), sy=sevOf(y, series(y.id).slice(-1)[0].v);
+      return (sy.lvl-sx.lvl) || ((sy.dev||0)-(sx.dev||0));
+    });
+    h+='<div class="card watchcard"><h2><span class="wstar">\u2605</span>Watching'+
+       '<span class="wmeta">'+wsum+'</span></h2>'+
+       '<div class="note" style="margin:-4px 0 8px">'+esc(watchCats().join(", "))+
+         (watchCats().length&&watchIds().length?", plus ":"")+
+         (watchIds().length? watchIds().map(function(i){return byId[i]?byId[i].name:i;}).join(", "):"")+
+         ' \u2014 '+wl.length+' test'+(wl.length===1?'':'s')+'. Tap a star anywhere to add or remove.</div>';
+    wsorted.forEach(function(a){ h+=analyteRow(a, latest.date); });
+    h+='<button class="gotrend" data-gotrend="__watch">Watchlist trends \u203a</button></div>';
+  }
+
   if(abn.length){
     h+='<div class="card abn-list"><h2>Outside the reference range \u2014 most severe first</h2>'+
        '<div class="note" style="margin:-4px 0 8px">The most recent value of every test. A date shown against a '+
@@ -1273,7 +1338,8 @@ function renderDash(root){
              : list.length+' test'+(list.length===1?'':'s');
     var open = CATOPEN[c] ? ' open' : '';
     h+='<div class="card cat'+open+'" data-catcard="'+esc(c)+'">'+
-         '<h2 data-cattoggle="'+esc(c)+'"><span class="cname">'+esc(c)+'</span>'+
+         '<h2 data-cattoggle="'+esc(c)+'">'+starBtn("cat",c,isWatchedCat(c))+
+           '<span class="cname">'+esc(c)+'</span>'+
            '<span class="cmeta">'+meta+'</span><span class="chev">&rsaquo;</span></h2>'+
          '<div class="catbody">'+list.map(function(a){ return analyteRow(a, latest.date); }).join("")+
            '<button class="gotrend" data-gotrend="'+esc(c)+'">All trends &rsaquo;</button>'+
@@ -1292,12 +1358,21 @@ function renderTrends(root){
   var cats=["All"]; STATE.analytes.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
   var h=searchBox("Search tests \u2014 name, category, or what it measures");
   // While searching, the category chips would fight the query. Hide them.
-  if(!q) h+='<div class="chiprow">'+cats.map(function(c){return '<button data-cat="'+esc(c)+'" class="'+(c===TRENDCAT?"on":"")+'">'+esc(c)+'</button>';}).join("")+'</div>';
+  if(!q){
+    var chips=cats.slice();
+    if(watchCount()) chips.splice(1,0,"__watch");     // right after "All"
+    h+='<div class="chiprow">'+chips.map(function(c){
+      var lbl = c==="__watch" ? "\u2605 Watching" : esc(c);
+      return '<button data-cat="'+esc(c)+'" class="'+(c===TRENDCAT?"on":"")+'">'+lbl+'</button>';
+    }).join("")+'</div>';
+  }
   h+='<div class="trtools">'+medToggle()+
        '<button class="btn" id="tr-pdf">Export these trends</button></div>';
   var list = q ? searchHits(q).map(function(x){ return x.a; })
                : STATE.analytes.filter(function(a){
-                   return series(a.id).length && (TRENDCAT==="All"||a.cat===TRENDCAT); });
+                   if(!series(a.id).length) return false;
+                   if(TRENDCAT==="__watch") return isWatchedId(a.id);
+                   return TRENDCAT==="All" || a.cat===TRENDCAT; });
   if(q) h+='<div class="note" style="margin:-6px 0 12px">'+list.length+' test'+(list.length===1?'':'s')+
            ' match \u201c'+esc(q)+'\u201d</div>';
   if(!list.length) h+='<div class="empty">'+(q
@@ -1525,12 +1600,23 @@ function openModal(id){
   var about = a.desc ? '<div class="about"><p>'+esc(a.desc)+'</p>'+(a.hint?'<p class="hint">'+esc(a.hint)+'</p>':'')+'</div>' : '';
   var back = SHEET_BACK ? '<button class="btn ghost" id="m-back" style="margin-top:8px">&lsaquo; Back</button>' : '';
   sheetOpen(
-    '<h3>'+esc(a.name)+'</h3><div class="rng">Reference '+esc(rangeText(a))+'</div>'+
+    '<h3>'+starBtn("id",a.id,isWatchedId(a.id))+esc(a.name)+'</h3>'+
+    '<div class="rng">Reference '+esc(rangeText(a))+'</div>'+
     '<div style="margin:2px 0 12px">'+gaugeFull(a,pts[pts.length-1].v)+'</div>'+
     (stagesFor(a)?'<div class="note" style="margin:0 0 16px">'+esc(stagesFor(a).src)+'</div>':'<div style="height:8px"></div>')+about+
     '<div class="chartbox">'+bigChartSVG(a)+'</div>'+
     '<table class="hist"><tr><th>Date</th><th>Result</th><th>Status</th></tr>'+rows+'</table>'+
     '<button class="btn ghost" id="m-close">Close</button>'+back);
+
+  var ws=document.querySelectorAll("#sheet [data-watchid]");
+  ws.forEach(function(b){ b.onclick=function(e){
+    e.stopPropagation(); e.preventDefault();
+    toggleWatchId(id);
+    b.classList.toggle("on", isWatchedId(id));
+    b.innerHTML = isWatchedId(id) ? "\u2605" : "\u2606";
+    themeToast(isWatchedId(id) ? "Watching "+a.name : "Stopped watching "+a.name);
+    render();                        // the tab underneath has to agree
+  }; });
 }
 function closeModal(){ document.getElementById("modal").classList.remove("open"); }
 document.getElementById("modal").addEventListener("click",function(e){ if(e.target===this) closeModal(); });
@@ -1595,6 +1681,49 @@ function reportKind(r){                       // "lab" if it holds anything a la
   return ks.some(function(k){ return !isSelfMeasured(k); }) ? "lab" : "vitals";
 }
 var MEDEDIT=null;                             // index of the medication being edited
+/* ---- watchlist ---------------------------------------------------------
+   Watching a category follows that panel; watching a test follows that test.
+   Kept apart so a new analyte added to "Liver" is picked up automatically,
+   while HbA1c stays exactly HbA1c.                                        */
+function watchCats(){ return (STATE.watch&&STATE.watch.cats)||[]; }
+function watchIds(){  return (STATE.watch&&STATE.watch.ids) ||[]; }
+function isWatchedCat(c){ return watchCats().indexOf(c)>=0; }
+function isWatchedId(id){
+  var a=byId[id];
+  return watchIds().indexOf(id)>=0 || (!!a && isWatchedCat(a.cat));
+}
+function watchCount(){ return watchedAnalytes().length; }
+function watchedAnalytes(){
+  return STATE.analytes.filter(function(a){ return isWatchedId(a.id) && series(a.id).length; });
+}
+function toggleWatchCat(c){
+  if(!STATE.watch) STATE.watch={cats:[],ids:[]};
+  var i=STATE.watch.cats.indexOf(c);
+  if(i>=0) STATE.watch.cats.splice(i,1); else STATE.watch.cats.push(c);
+  persist();
+}
+function toggleWatchId(id){
+  if(!STATE.watch) STATE.watch={cats:[],ids:[]};
+  var a=byId[id];
+  // Un-starring one test out of a watched panel: keep the rest by pinning them
+  // individually, rather than silently dropping the whole panel.
+  if(a && isWatchedCat(a.cat) && watchIds().indexOf(id)<0){
+    STATE.watch.cats.splice(STATE.watch.cats.indexOf(a.cat),1);
+    STATE.analytes.forEach(function(o){
+      if(o.cat===a.cat && o.id!==id && STATE.watch.ids.indexOf(o.id)<0) STATE.watch.ids.push(o.id);
+    });
+    persist(); return;
+  }
+  var i=STATE.watch.ids.indexOf(id);
+  if(i>=0) STATE.watch.ids.splice(i,1); else STATE.watch.ids.push(id);
+  persist();
+}
+function starBtn(kind, key, on){
+  return '<button class="star'+(on?" on":"")+'" data-watch'+kind+'="'+esc(key)+'" type="button" '+
+         'aria-pressed="'+(on?"true":"false")+'" title="'+(on?"Stop watching":"Add to watchlist")+'">'+
+         (on?"\u2605":"\u2606")+'</button>';
+}
+
 var MEDMARK = true;                           // medication marker lines on charts
 try{ MEDMARK = localStorage.getItem("labmon-medmark") !== "0"; }catch(e){}
 function setMedMark(on){
@@ -2044,6 +2173,18 @@ function render(editDate){
     render();
     themeToast(MEDMARK ? "Medication markers on" : "Medication markers off");
   };
+  root.querySelectorAll("[data-watchid]").forEach(function(b){ b.onclick=function(e){
+    e.stopPropagation(); e.preventDefault();
+    var id=b.getAttribute("data-watchid");
+    toggleWatchId(id); render();
+    themeToast(isWatchedId(id) ? "Watching "+byId[id].name : "Stopped watching "+byId[id].name);
+  }; });
+  root.querySelectorAll("[data-watchcat]").forEach(function(b){ b.onclick=function(e){
+    e.stopPropagation(); e.preventDefault();
+    var c=b.getAttribute("data-watchcat");
+    toggleWatchCat(c); render();
+    themeToast(isWatchedCat(c) ? "Watching "+c : "Stopped watching "+c);
+  }; });
   root.querySelectorAll("[data-repfilter]").forEach(function(b){ b.onclick=function(){
     REPFILTER=b.getAttribute("data-repfilter");
     try{ localStorage.setItem("labmon-repfilter",REPFILTER); }catch(e){}
