@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0E5450">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lab Monitor">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<title>Lab Results Monitor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root{
+  --ink:#0A1214; --panel:#111E22; --panel-2:#16272C; --line:rgba(255,255,255,.075);
+  --line-2:rgba(255,255,255,.14);
+  --fg:#EAF4F3; --fg-2:#8AA3A5; --fg-3:#5D7477;
+  --cy:#2ED3C6; --cy-d:#0E8F86; --cy-glow:rgba(46,211,198,.18);
+  --ok:#34D399; --ok-bg:rgba(52,211,153,.13);
+  --hi:#FF5C7A; --hi-bg:rgba(255,92,122,.13);
+  --lo:#F0B429; --lo-bg:rgba(240,180,41,.13);
+  --mag:#E0489B;
+  --r:18px; --r-sm:12px;
+}
+:root[data-theme="light"], :root:not([data-theme="dark"]){}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --ink:#F2F6F6; --panel:#FFFFFF; --panel-2:#F7FAFA; --line:rgba(10,30,32,.09); --line-2:rgba(10,30,32,.16);
+    --fg:#0C1A1C; --fg-2:#57706F; --fg-3:#8AA0A0;
+    --cy:#0E8F86; --cy-d:#0B6F68; --cy-glow:rgba(14,143,134,.12);
+    --ok:#12855C; --ok-bg:rgba(18,133,92,.10);
+    --hi:#D62B54; --hi-bg:rgba(214,43,84,.10);
+    --lo:#A5720B; --lo-bg:rgba(165,114,11,.12);
+    --mag:#C0247D;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--ink); color:var(--fg);
+  font-family:Manrope,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:15px; line-height:1.45; font-feature-settings:"tnum" 1,"ss01" 1;
+  padding-bottom:96px; -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- header ---------- */
+header{
+  padding:22px 18px 18px; position:relative; overflow:hidden;
+  background:
+    radial-gradient(120% 100% at 88% -30%, var(--cy-glow), transparent 62%),
+    linear-gradient(180deg,var(--panel) 0%, var(--ink) 100%);
+  border-bottom:1px solid var(--line);
+}
+header h1{font-size:15px;font-weight:600;letter-spacing:.14em;text-transform:none;color:var(--cy);opacity:.9}
+header .sub{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:6px;line-height:1.15}
+.syncnote{
+  font-size:11px;font-weight:600;margin-top:10px;display:inline-flex;align-items:center;gap:6px;
+  padding:4px 10px 4px 8px;border-radius:99px;background:var(--panel-2);border:1px solid var(--line);color:var(--fg-2);
+}
+.syncnote:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--cy);box-shadow:0 0 8px var(--cy)}
+.syncnote.err{color:var(--hi)} .syncnote.err:before{background:var(--hi);box-shadow:0 0 8px var(--hi)}
+
+.wrap{max-width:760px;margin:0 auto;padding:14px}
+
+/* ---------- panels ---------- */
+.card{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
+  padding:16px; margin-bottom:12px; position:relative;
+}
+.card h2{
+  font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--fg);
+  margin-bottom:12px;text-transform:none;display:flex;align-items:center;gap:8px;
+}
+.card h2:before{content:"";width:3px;height:14px;border-radius:2px;background:var(--cy);flex:none}
+
+/* ---------- stat trio ---------- */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.kpi{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:14px 10px;text-align:center;position:relative;overflow:hidden;
+}
+.kpi .n{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.kpi .l{font-size:11.5px;color:var(--fg-2);margin-top:6px;font-weight:600}
+.kpi.ok .n{color:var(--ok)} .kpi.hi .n{color:var(--hi)} .kpi.lo .n{color:var(--lo)}
+.kpi:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;opacity:.55}
+.kpi.ok:after{background:var(--ok)} .kpi.hi:after{background:var(--hi)} .kpi.lo:after{background:var(--lo)}
+
+/* ---------- result row + signature gauge ---------- */
+.row{
+  display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;
+  padding:14px 2px;border-bottom:1px solid var(--line);cursor:pointer;
+}
+.row:last-child{border-bottom:none}
+.row .nm b{font-size:15px;font-weight:700;display:block;letter-spacing:-.01em}
+.row .nm span{font-size:12px;color:var(--fg-3);font-weight:500}
+.row .val{text-align:right;display:flex;align-items:baseline;gap:8px;justify-content:flex-end}
+.row .val b{font-size:19px;font-weight:800;letter-spacing:-.02em}
+.row .val span{font-size:11.5px;color:var(--fg-2);font-weight:600}
+.row .gauge{grid-column:1 / -1;margin-top:2px}
+.row .nm b .q{
+  display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;
+  border-radius:50%;background:var(--panel-2);border:1px solid var(--line);
+  color:var(--fg-3);font-size:9.5px;font-weight:700;margin-left:6px;vertical-align:1px;
+}
+
+.gauge{position:relative;height:6px;border-radius:99px;background:var(--panel-2);overflow:visible}
+.gauge .band{position:absolute;top:0;bottom:0;background:var(--cy);opacity:.32;border-radius:99px}
+.gauge .pin{position:absolute;top:-3px;width:3px;height:12px;border-radius:2px;transform:translateX(-1.5px)}
+.gauge.ok .pin{background:var(--ok);box-shadow:0 0 10px var(--ok-bg)}
+.gauge.hi .pin{background:var(--hi);box-shadow:0 0 10px rgba(255,92,122,.5)}
+.gauge.lo .pin{background:var(--lo);box-shadow:0 0 10px rgba(240,180,41,.5)}
+
+.chip{font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:99px;white-space:nowrap;letter-spacing:.01em}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}
+.chip.hi{background:var(--hi-bg);color:var(--hi)}
+.chip.lo{background:var(--lo-bg);color:var(--lo)}
+
+.spark{width:0;height:0;display:none}   /* replaced by the gauge */
+.arrow{font-size:12px;font-weight:700}
+.arrow.up{color:var(--hi)} .arrow.down{color:var(--ok)} .arrow.flat{color:var(--fg-3)}
+.arrow.up.good{color:var(--ok)} .arrow.down.bad{color:var(--hi)}
+
+/* ---------- forms ---------- */
+select,input[type=date],input[type=number],input[type=text],input[type=email],input[type=password]{
+  width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:var(--r-sm);
+  background:var(--panel-2);color:var(--fg);font-size:15px;font-family:inherit;
+  transition:border-color .15s, box-shadow .15s;
+}
+input:focus,select:focus{outline:none;border-color:var(--cy);box-shadow:0 0 0 3px var(--cy-glow)}
+label{font-size:12px;font-weight:700;color:var(--fg-2);display:block;margin:12px 0 5px;letter-spacing:.01em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.btn{
+  display:block;width:100%;padding:14px;border:none;border-radius:14px;
+  background:linear-gradient(180deg,var(--cy),var(--cy-d));color:#04201E;
+  font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;margin-top:14px;letter-spacing:-.01em;
+}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:none;border:1px solid var(--line-2);color:var(--fg);font-weight:700}
+.btn.danger{background:none;border:1px solid var(--hi);color:var(--hi)}
+
+/* ---------- bottom dock ---------- */
+.tabs{
+  position:fixed;bottom:0;left:0;right:0;display:flex;z-index:50;
+  background:color-mix(in srgb, var(--panel) 88%, transparent);
+  backdrop-filter:saturate(1.4) blur(18px); -webkit-backdrop-filter:saturate(1.4) blur(18px);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);
+}
+.tabs button{
+  flex:1;padding:11px 2px 10px;background:none;border:none;color:var(--fg-3);
+  font-size:10.5px;font-weight:700;font-family:inherit;cursor:pointer;position:relative;
+}
+.tabs button .ic{display:block;font-size:17px;margin-bottom:3px;line-height:1}
+.tabs button.active{color:var(--cy)}
+.tabs button.active:before{
+  content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:22px;height:2px;border-radius:0 0 3px 3px;background:var(--cy);box-shadow:0 0 10px var(--cy);
+}
+
+/* ---------- sheet ---------- */
+.modal{position:fixed;inset:0;background:rgba(2,8,9,.66);display:none;align-items:flex-end;justify-content:center;z-index:100;backdrop-filter:blur(3px)}
+.modal.open{display:flex}
+.sheet{
+  background:var(--panel);width:100%;max-width:760px;border-radius:24px 24px 0 0;
+  padding:20px 18px calc(20px + env(safe-area-inset-bottom));max-height:90vh;overflow-y:auto;
+  border-top:1px solid var(--line-2);
+}
+.sheet h3{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:3px}
+.sheet .rng{font-size:12.5px;color:var(--fg-2);margin-bottom:16px;font-weight:600}
+.sheet .about{background:var(--panel-2);border-radius:14px;padding:13px 15px;margin-bottom:16px;border:1px solid var(--line)}
+.sheet .about p{font-size:14px;line-height:1.55}
+.sheet .about p.hint{margin-top:8px;color:var(--fg-2);font-size:12.5px}
+
+.chartbox{overflow-x:auto;margin:0 -4px}
+.hist{width:100%;border-collapse:collapse;margin-top:14px;font-size:14px}
+.hist th{text-align:left;font-size:11px;color:var(--fg-3);padding:8px 6px;border-bottom:1px solid var(--line);font-weight:700}
+.hist td{padding:10px 6px;border-bottom:1px solid var(--line)}
+.hist tr:nth-child(even) td{background:var(--panel-2)}
+
+.note{font-size:12.5px;color:var(--fg-2);margin-top:10px;line-height:1.5}
+.banner{background:var(--lo-bg);color:var(--lo);border-radius:var(--r-sm);padding:10px 13px;font-size:12.5px;font-weight:700;margin-bottom:12px;display:none}
+.banner.show{display:block}
+
+.seg{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;margin-bottom:8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{
+  flex:none;padding:8px 15px;border-radius:99px;border:1px solid var(--line-2);
+  background:var(--panel);color:var(--fg-2);font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;
+}
+.seg button.on{background:var(--cy);border-color:var(--cy);color:#04201E}
+
+.dategrid label{margin-top:0}
+.empty{text-align:center;color:var(--fg-3);padding:30px 0;font-size:14px}
+
+/* ---------- doctor flags ---------- */
+.flag{background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--cy);border-radius:14px;padding:14px;margin-bottom:10px}
+.flag.p1{border-left-color:var(--hi)} .flag.p2{border-left-color:var(--lo)} .flag.p3{border-left-color:var(--cy)}
+.flag .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.flag h4{font-size:15.5px;font-weight:700;letter-spacing:-.01em}
+.flag .val{font-size:15px;font-weight:800;white-space:nowrap}
+.flag.p1 .val{color:var(--hi)} .flag.p2 .val{color:var(--lo)} .flag.p3 .val{color:var(--cy)}
+.flag .why{font-size:13px;color:var(--fg-2);margin-top:6px;line-height:1.5}
+.flag .ask{font-size:13.5px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.flag .ask b{color:var(--cy)}
+.sect{font-size:12.5px;font-weight:700;color:var(--fg-2);margin:18px 0 10px}
+.disc{font-size:12px;color:var(--fg-3);background:var(--panel-2);border-radius:14px;padding:13px 15px;margin-top:16px;line-height:1.55}
+
+.datecard{display:flex;align-items:center;justify-content:space-between;padding:14px 2px;border-bottom:1px solid var(--line);gap:10px}
+.datecard:last-child{border-bottom:none}
+.datecard b{font-size:15px;font-weight:700}
+.datecard span{font-size:12px;color:var(--fg-3);display:block;margin-top:2px}
+.mini-btn{padding:8px 13px;border-radius:10px;border:1px solid var(--line-2);background:none;color:var(--fg);font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:6px}
+.mini-btn.del{border-color:var(--hi);color:var(--hi)}
+
+.pick .cat{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
+.pick .item{display:flex;align-items:center;gap:10px;padding:9px 2px 9px 28px;border-bottom:1px solid var(--line);font-size:14px}
+.pick .item span.u{color:var(--fg-3);font-size:11.5px;margin-left:auto}
+.pick input[type=checkbox]{width:19px;height:19px;accent-color:var(--cy);flex:none}
+.pickbar{display:flex;gap:8px;margin:6px 0 12px}
+.pickbar button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--line-2);background:none;color:var(--fg);font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer}
+
+footer{padding:18px;text-align:center;font-size:11.5px;color:var(--fg-3);line-height:1.6}
+
+@media (prefers-reduced-motion: reduce){ *{transition:none !important;animation:none !important} }
+
+#printview{display:none}
+@media print{
+  body>*{display:none !important}
+  #printview{display:block !important;
+    --fg:#111;--fg-2:#555;--fg-3:#777;--panel:#fff;--panel-2:#f4f7f7;--line:#c9d4d4;
+    --cy:#0E8F86;--cy-d:#0B6F68;--mag:#C0247D;--hi:#C22348;--lo:#8a5f04;--ok:#12855C;
+    --hi-bg:#fdeef1;--lo-bg:#fdf5e4;--ok-bg:#e9f6f0;
+    color:#111;background:#fff;font-size:11pt;font-family:Manrope,sans-serif}
+  @page{margin:14mm}
+  #printview h1{font-size:19pt;font-weight:800;letter-spacing:-.02em;color:#0B6F68;margin-bottom:3px}
+  #printview .meta{font-size:9pt;color:#555;margin-bottom:16px}
+  #printview h2{font-size:11pt;font-weight:800;color:#0B6F68;padding:0 0 5px;border-bottom:2px solid #0E8F86;margin:18px 0 9px;page-break-after:avoid}
+  #printview table{width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:8px}
+  #printview th{text-align:left;color:#0B6F68;padding:5px 7px;font-size:8.5pt;font-weight:800;border-bottom:1px solid #c9d4d4}
+  #printview td{padding:5px 7px;border-bottom:1px solid #e3eaea;vertical-align:top}
+  #printview tr:nth-child(even) td{background:#f6f9f9}
+  #printview td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  #printview .st{font-weight:800;font-size:8.5pt}
+  #printview .st.hi{color:#C22348} #printview .st.lo{color:#8a5f04} #printview .st.ok{color:#12855C}
+  #printview .fl{border:1px solid #dde6e6;border-left:3px solid #C0247D;border-radius:6px;padding:9px 11px;margin-bottom:8px;page-break-inside:avoid}
+  #printview .fl b{font-size:10.5pt}
+  #printview .fl .w{font-size:9pt;color:#444;margin-top:3px}
+  #printview .fl .a{font-size:9pt;margin-top:5px}
+  #printview .ch{page-break-inside:avoid;margin-bottom:14px}
+  #printview .ch .cap{font-size:10.5pt;font-weight:800;margin-bottom:2px}
+  #printview .ch .sub{font-size:8.5pt;color:#555;margin-bottom:4px}
+  #printview .disc2{font-size:8.5pt;color:#555;border-top:1px solid #c9d4d4;padding-top:9px;margin-top:16px}
+  #printview .pb{page-break-before:always}
+}
+
+#gate{position:fixed;inset:0;background:var(--ink);z-index:200;display:flex;align-items:center;justify-content:center;padding:22px;
+  background-image:radial-gradient(120% 80% at 50% -10%, var(--cy-glow), transparent 60%)}
+#gate .box{width:100%;max-width:390px;background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:26px}
+#gate h1{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+#gate p.s{font-size:13.5px;color:var(--fg-2);margin-bottom:16px;line-height:1.5}
+#gate .err{font-size:12.5px;color:var(--hi);margin-top:12px;display:none;font-weight:600}
+#gate .err.show{display:block}
+#gate .alt{text-align:center;font-size:13.5px;color:var(--cy);margin-top:16px;cursor:pointer;font-weight:700}
+#busy{position:fixed;top:0;left:0;right:0;height:2px;background:var(--cy);box-shadow:0 0 12px var(--cy);transform:scaleX(0);transform-origin:left;transition:transform .35s;z-index:300}
+#busy.on{transform:scaleX(.85)}
+@media print{ #gate,#busy{display:none !important} }
+</style>
+</head>
+<body>
+<div id="busy"></div>
+
+<div id="gate">
+  <div class="box">
+    <h1>Lab Results Monitor</h1>
+    <p class="s" id="g-sub">Sign in to your private record.</p>
+    <label>Email</label><input type="email" id="g-email" autocomplete="username" inputmode="email">
+    <label>Password</label><input type="password" id="g-pass" autocomplete="current-password">
+    <button class="btn" id="g-go">Sign in</button>
+    <div class="alt" id="g-alt">No account yet? Create one</div>
+    <div class="err" id="g-err"></div>
+  </div>
+</div>
+
+<header>
+  <h1>Latest results</h1>
+  <div class="sub" id="hdrSub">&mdash;</div>
+  <div class="syncnote" id="syncNote">Loading&hellip;</div>
+</header>
+
+<div class="wrap"><div id="root"></div></div>
+
+<div class="tabs">
+  <button data-tab="dash" class="active"><span class="ic">&#9703;</span>Home</button>
+  <button data-tab="trends"><span class="ic">&#8961;</span>Trends</button>
+  <button data-tab="doc"><span class="ic">&#10010;</span>Doctor</button>
+  <button data-tab="add"><span class="ic">&#65291;</span>Add</button>
+  <button data-tab="meds"><span class="ic">&#8478;</span>Meds</button>
+  <button data-tab="data"><span class="ic">&#8801;</span>Data</button>
+</div>
+
+<div id="printview"></div>
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<footer>Reference ranges as printed on the source lab reports. Personal record &mdash; discuss results with your doctor.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+var SUPABASE_URL = "https://mpdzvmzlsbxgtuilihlx.supabase.co";
+var SUPABASE_KEY = "sb_publishable_ZmHevYIdUQyhJVjDQQ8aLw_dllQ_3Xe";
+
+var DEFAULT_ANALYTES = [{"id":"wt","name":"Weight","cat":"Vitals","unit":"kg","lo":null,"hi":null,"desc":"Your body weight. Weight change is often the main driver behind improvements in liver fat, blood sugar and triglycerides.","hint":"Log it any day \u2014 no lab visit needed. Weigh at the same time of day for consistency."},{"id":"sys","name":"Blood Pressure (systolic)","cat":"Vitals","unit":"mmHg","lo":null,"hi":130,"lowerBetter":true,"desc":"The upper blood pressure number \u2014 pressure while your heart beats. This is what blood-pressure medication targets.","hint":"Commonly targeted under 130. Sit quietly 5 minutes before measuring."},{"id":"dia","name":"Blood Pressure (diastolic)","cat":"Vitals","unit":"mmHg","lo":null,"hi":80,"lowerBetter":true,"desc":"The lower blood pressure number \u2014 pressure while your heart rests between beats.","hint":"Commonly targeted under 80."},{"id":"wbc","name":"WBC","cat":"Hematology (CBC)","unit":"\u00d710\u00b3/\u00b5L","lo":3.9,"hi":10.2,"desc":"White blood cells \u2014 your infection-fighting cells.","hint":"Rises with infection or inflammation."},{"id":"rbc","name":"RBC","cat":"Hematology (CBC)","unit":"\u00d710\u2076/\u00b5L","lo":4.3,"hi":5.75,"desc":"Red blood cells \u2014 they carry oxygen around your body.","hint":"Low can mean anemia."},{"id":"hct","name":"Hematocrit (HCT)","cat":"Hematology (CBC)","unit":"%","lo":39.5,"hi":50.5,"desc":"The percentage of your blood made up of red cells.","hint":"Low suggests anemia."},{"id":"hgb","name":"Hemoglobin (HGB)","cat":"Hematology (CBC)","unit":"g/dL","lo":13.5,"hi":17.2,"desc":"Hemoglobin \u2014 the protein in red cells that actually holds the oxygen.","hint":"Low means anemia; this is the key anemia number."},{"id":"mcv","name":"MCV","cat":"Hematology (CBC)","unit":"fL","lo":80,"hi":99,"desc":"Average size of your red blood cells.","hint":"Helps identify what type of anemia, if any."},{"id":"mch","name":"MCH","cat":"Hematology (CBC)","unit":"pg","lo":27,"hi":33.5,"desc":"Average amount of hemoglobin inside each red cell.","hint":"Read alongside MCV."},{"id":"mchc","name":"MCHC","cat":"Hematology (CBC)","unit":"g/dL","lo":31.5,"hi":36,"desc":"How concentrated the hemoglobin is inside your red cells.","hint":"Read alongside MCV and MCH."},{"id":"rdw","name":"RDW","cat":"Hematology (CBC)","unit":"%","lo":11.8,"hi":14.5,"desc":"How much your red cells vary in size.","hint":"High can be an early hint of anemia."},{"id":"plt","name":"Platelets","cat":"Hematology (CBC)","unit":"\u00d710\u00b3/\u00b5L","lo":150,"hi":450,"desc":"Platelets \u2014 the cells that make your blood clot.","hint":"Too low risks bleeding; too high risks clotting."},{"id":"mpv","name":"MPV","cat":"Hematology (CBC)","unit":"fL","lo":9.2,"hi":12.7,"desc":"Average size of your platelets.","hint":"Supporting detail for the platelet count."},{"id":"neut","name":"Neutrophils (abs)","cat":"Differential Count","unit":"\u00d710\u00b3/\u00b5L","lo":1.5,"hi":7.7,"desc":"Neutrophils \u2014 the white cells that fight bacterial infection.","hint":"Rise sharply with bacterial infection."},{"id":"lymph","name":"Lymphocytes (abs)","cat":"Differential Count","unit":"\u00d710\u00b3/\u00b5L","lo":1.1,"hi":4.5,"desc":"Lymphocytes \u2014 the white cells that fight viruses.","hint":"Rise with viral infection."},{"id":"mono","name":"Monocytes (abs)","cat":"Differential Count","unit":"\u00d710\u00b3/\u00b5L","lo":0.1,"hi":0.9,"desc":"Monocytes \u2014 white cells that clean up damaged tissue.","hint":"Mildly high is common and often not significant."},{"id":"eos","name":"Eosinophils (abs)","cat":"Differential Count","unit":"\u00d710\u00b3/\u00b5L","lo":0.02,"hi":0.5,"desc":"Eosinophils \u2014 white cells linked to allergy and parasites.","hint":"High suggests allergy or parasitic infection."},{"id":"baso","name":"Basophils (abs)","cat":"Differential Count","unit":"\u00d710\u00b3/\u00b5L","lo":0,"hi":0.2,"desc":"Basophils \u2014 the rarest white cells, involved in allergic reactions.","hint":"Rarely significant on its own."},{"id":"tc","name":"Total Cholesterol","cat":"Lipid Profile","unit":"mg/dL","lo":null,"hi":200,"lowerBetter":true,"desc":"Total cholesterol \u2014 all the cholesterol in your blood added together.","hint":"Lower is better."},{"id":"tg","name":"Triglycerides","cat":"Lipid Profile","unit":"mg/dL","lo":null,"hi":150,"lowerBetter":true,"desc":"Triglycerides \u2014 fat circulating in your blood, strongly affected by diet, alcohol and blood sugar.","hint":"Lower is better."},{"id":"hdl","name":"HDL Cholesterol","cat":"Lipid Profile","unit":"mg/dL","lo":60,"hi":null,"higherBetter":true,"desc":"HDL \u2014 the 'good' cholesterol that clears fat out of your arteries.","hint":"Higher is better."},{"id":"ldl","name":"LDL Cholesterol","cat":"Lipid Profile","unit":"mg/dL","lo":null,"hi":100,"lowerBetter":true,"desc":"LDL \u2014 the 'bad' cholesterol that builds up in artery walls.","hint":"Lower is better."},{"id":"alt","name":"SGPT (ALT)","cat":"Liver","unit":"U/L","lo":0,"hi":55,"lowerBetter":true,"desc":"ALT \u2014 an enzyme inside liver cells. It leaks into the blood when liver cells are irritated or damaged.","hint":"Lower is better; this is a main liver marker."},{"id":"ast","name":"SGOT (AST)","cat":"Liver","unit":"U/L","lo":0,"hi":40,"lowerBetter":true,"desc":"AST \u2014 another liver-cell enzyme, also found in muscle.","hint":"Lower is better; read together with ALT."},{"id":"alp","name":"Alkaline Phosphatase","cat":"Liver","unit":"U/L","lo":40,"hi":129,"desc":"Alkaline phosphatase \u2014 an enzyme from the liver's bile ducts and from bone.","hint":"High can point to bile-duct or bone issues."},{"id":"ggt","name":"GGT","cat":"Liver","unit":"U/L","lo":0,"hi":55,"lowerBetter":true,"desc":"GGT \u2014 a liver enzyme that is especially sensitive to alcohol and bile-duct problems.","hint":"Lower is better."},{"id":"crea","name":"Creatinine","cat":"Renal","unit":"mg/dL","lo":0.6,"hi":1.2,"desc":"Creatinine \u2014 muscle waste that healthy kidneys filter out.","hint":"High suggests the kidneys aren't filtering well."},{"id":"gfr","name":"GFR (est.)","cat":"Renal","unit":"mL/min","lo":60,"hi":null,"higherBetter":true,"desc":"GFR \u2014 an estimate of how much blood your kidneys filter per minute. The overall kidney score.","hint":"Higher is better; above 60 is normal."},{"id":"ua","name":"Uric Acid","cat":"Renal","unit":"mg/dL","lo":3.7,"hi":7.7,"desc":"Uric acid \u2014 waste from breaking down purines in food.","hint":"High can cause gout."},{"id":"crp","name":"CRP","cat":"Inflammation & Other","unit":"mg/dL","lo":0,"hi":0.5,"lowerBetter":true,"desc":"C-reactive protein \u2014 a general marker of inflammation anywhere in the body.","hint":"Lower is better."},{"id":"cas","name":"Calcium (Serum)","cat":"Inflammation & Other","unit":"mg/dL","lo":8.6,"hi":10,"desc":"Total calcium in your blood \u2014 important for bones, nerves, muscles and heart rhythm.","hint":"Tracked separately from Corrected Calcium, which is adjusted for protein levels."},{"id":"ca","name":"Corrected Calcium","cat":"Inflammation & Other","unit":"mg/dL","lo":8.5,"hi":10.5,"desc":"Corrected calcium \u2014 calcium in your blood, adjusted for protein levels.","hint":"Matters for bones, nerves and heart rhythm."},{"id":"ferr","name":"Ferritin","cat":"Inflammation & Other","unit":"ng/mL","lo":21.8,"hi":274.6,"desc":"Ferritin \u2014 your stored iron. It also rises with inflammation or liver irritation, so a high value isn't always about iron.","hint":"High needs a cause identified."},{"id":"tsh","name":"TSH","cat":"Hormones & Vitamins","unit":"\u00b5IU/mL","lo":0.3,"hi":4.2,"desc":"TSH \u2014 the hormone that tells your thyroid how hard to work. The main thyroid screening test.","hint":"High suggests underactive thyroid, low suggests overactive."},{"id":"b12","name":"Vitamin B12","cat":"Hormones & Vitamins","unit":"pg/mL","lo":187,"hi":883,"desc":"Vitamin B12 \u2014 needed for nerves and for making red blood cells.","hint":"Low causes fatigue and nerve symptoms."},{"id":"vitd","name":"Vitamin D (25-OH)","cat":"Hormones & Vitamins","unit":"ng/mL","lo":30,"hi":100,"desc":"Vitamin D \u2014 needed for bone health and immune function.","hint":"Low is very common; below 30 is deficient."},{"id":"bun","name":"Blood Urea Nitrogen (BUN)","cat":"Renal","unit":"mg/dL","lo":8.9,"hi":20.6,"desc":"Blood urea nitrogen \u2014 protein waste the kidneys clear.","hint":"Read together with creatinine."},{"id":"na","name":"Sodium (Na)","cat":"Electrolytes","unit":"mmol/L","lo":136,"hi":145,"desc":"Sodium \u2014 a salt that controls fluid balance in your body.","hint":"Kept in a tight range by the kidneys."},{"id":"k","name":"Potassium (K)","cat":"Electrolytes","unit":"mmol/L","lo":3.5,"hi":5.1,"desc":"Potassium \u2014 a salt essential for heart rhythm and muscle function.","hint":"Both high and low are dangerous for the heart."},{"id":"cl","name":"Chloride (Cl)","cat":"Electrolytes","unit":"mmol/L","lo":98,"hi":107,"desc":"Chloride \u2014 a salt that works alongside sodium.","hint":"Read with the other electrolytes."},{"id":"trop","name":"Troponin HS","cat":"Cardiac","unit":"pg/mL","lo":null,"hi":34.2,"lowerBetter":true,"desc":"Troponin \u2014 a protein released when heart muscle is damaged. Used to rule out a heart attack.","hint":"Should be low; a normal result is reassuring."},{"id":"ddimer","name":"D-Dimer (Quant.)","cat":"Cardiac","unit":"\u00b5g/mL","lo":null,"hi":0.5,"lowerBetter":true,"desc":"D-dimer \u2014 a fragment left behind when a blood clot dissolves. Used to rule out clots in the legs or lungs.","hint":"A normal result largely rules out a clot."},{"id":"hba1c","name":"HbA1c","cat":"Glycemic Control","unit":"%","lo":null,"hi":5.7,"lowerBetter":true,"desc":"HbA1c \u2014 your average blood sugar over roughly the past 3 months, in one number.","hint":"Under 5.7 is normal, 5.7\u20136.4 is prediabetes, 6.5+ is diabetes."},{"id":"eag","name":"Estimated Avg. Glucose (eAG)","cat":"Glycemic Control","unit":"mg/dL","lo":null,"hi":117,"lowerBetter":true,"desc":"Estimated average glucose \u2014 the same HbA1c result expressed as a daily blood-sugar number.","hint":"Lower is better."},{"id":"homair","name":"HOMA-IR","cat":"Glycemic Control","unit":"index","lo":null,"hi":1.9,"lowerBetter":true,"desc":"HOMA-IR \u2014 how hard your body has to work to keep blood sugar under control (insulin resistance).","hint":"Under 1.0 is insulin-sensitive; above 2.9 is significant resistance."},{"id":"acr","name":"Albumin/Creatinine Ratio","cat":"Renal","unit":"mg/g","lo":null,"hi":30,"lowerBetter":true,"desc":"Albumin/creatinine ratio \u2014 measures protein leaking into your urine, which shouldn't normally happen.","hint":"Lower is better; an early kidney-damage warning."}];
+
+var STATE = { analytes: DEFAULT_ANALYTES, results: [], meds: [] };
+var byId = {};
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var BOOTED = false;
+
+function busy(on){ document.getElementById("busy").classList.toggle("on", !!on); }
+function note(txt, err){
+  var el = document.getElementById("syncNote");
+  el.textContent = txt;
+  el.className = "syncnote" + (err ? " err" : "");
+}
+
+var SB = {
+  saving:false, again:false,
+
+  load: function(){
+    busy(true);
+    return Promise.all([
+      sb.from("lab_reports").select("taken_on,lab,values").order("taken_on"),
+      sb.from("medications").select("name,started_on,until_on,note").order("started_on"),
+      sb.from("app_settings").select("analytes").maybeSingle()
+    ]).then(function(r){
+      if(r[0].error) throw r[0].error;
+      if(r[1].error) throw r[1].error;
+      STATE.results = (r[0].data||[]).map(function(x){
+        return { date:x.taken_on, lab:x.lab||"", values:x.values||{} };
+      });
+      STATE.meds = (r[1].data||[]).map(function(x){
+        return { name:x.name, start:x.started_on, until:x.until_on||"", note:x.note||"" };
+      });
+      if(r[2] && r[2].data && r[2].data.analytes && r[2].data.analytes.length){
+        STATE.analytes = r[2].data.analytes;
+      }
+      byId = {}; STATE.analytes.forEach(function(a){ byId[a.id]=a; });
+      busy(false);
+      note(STATE.results.length + " reports \u00b7 synced");
+    });
+  },
+
+  save: function(){
+    if(this.saving){ this.again = true; return; }
+    this.saving = true; busy(true); note("Saving\u2026");
+    var self = this;
+    var reports = STATE.results.map(function(r){
+      return { taken_on:r.date, lab:r.lab||null, values:r.values };
+    });
+    var dates = reports.map(function(r){ return r.taken_on; });
+
+    return sb.from("lab_reports").upsert(reports, { onConflict:"user_id,taken_on" })
+      .then(function(res){
+        if(res.error) throw res.error;
+        var q = sb.from("lab_reports").delete();
+        return dates.length ? q.not("taken_on","in","(" + dates.join(",") + ")")
+                            : q.neq("taken_on","1900-01-01");
+      })
+      .then(function(res){
+        if(res && res.error) throw res.error;
+        return sb.from("medications").delete().not("id","is",null);
+      })
+      .then(function(res){
+        if(res && res.error) throw res.error;
+        if(!STATE.meds.length) return { error:null };
+        return sb.from("medications").insert(STATE.meds.map(function(m){
+          return { name:m.name, started_on:m.start, until_on:m.until||null, note:m.note||null };
+        }));
+      })
+      .then(function(res){
+        if(res && res.error) throw res.error;
+        return sb.from("app_settings").upsert({ analytes:STATE.analytes }, { onConflict:"user_id" });
+      })
+      .then(function(){
+        self.saving = false; busy(false);
+        note(STATE.results.length + " reports \u00b7 synced");
+        if(self.again){ self.again = false; self.save(); }
+      })
+      .catch(function(e){
+        self.saving = false; busy(false);
+        note("Not saved \u2014 " + (e.message || "connection problem"), true);
+      });
+  },
+
+  signOut: function(){ sb.auth.signOut().then(function(){ location.reload(); }); }
+};
+
+(function(){
+  var mode = "in";
+  var gate = document.getElementById("gate"), err = document.getElementById("g-err");
+  function fail(m){ err.textContent = m; err.classList.add("show"); }
+  function start(){
+    gate.style.display = "none";
+    SB.load().then(boot).catch(function(e){
+      note("Could not load \u2014 " + (e.message||""), true); boot();
+    });
+  }
+  document.getElementById("g-alt").onclick = function(){
+    mode = mode === "in" ? "up" : "in";
+    document.getElementById("g-go").textContent = mode === "in" ? "Sign in" : "Create account";
+    document.getElementById("g-alt").textContent = mode === "in" ? "No account yet? Create one" : "Already have an account? Sign in";
+    document.getElementById("g-sub").textContent = mode === "in" ? "Sign in to your private record." : "Your results stay private to this account.";
+    err.classList.remove("show");
+  };
+  document.getElementById("g-go").onclick = function(){
+    var e = document.getElementById("g-email").value.trim();
+    var p = document.getElementById("g-pass").value;
+    if(!e || !p){ fail("Enter your email and password."); return; }
+    err.classList.remove("show"); busy(true);
+    var call = mode === "in" ? sb.auth.signInWithPassword({email:e, password:p})
+                             : sb.auth.signUp({email:e, password:p});
+    call.then(function(r){
+      busy(false);
+      if(r.error){ fail(r.error.message); return; }
+      if(!r.data.session){ fail("Account created. Check your email to confirm, then sign in."); return; }
+      start();
+    });
+  };
+  document.getElementById("g-pass").addEventListener("keydown", function(ev){
+    if(ev.key === "Enter") document.getElementById("g-go").click();
+  });
+  sb.auth.getSession().then(function(r){ if(r.data.session) start(); });
+})();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+}
+
+function boot(){
+  if(BOOTED){ return; }
+  BOOTED = true;
+  (function(){
+
+"use strict";
+var TAB = "dash", TRENDCAT = "All";
+
+function sortedResults(){ return STATE.results.slice().sort(function(a,b){ return a.date<b.date?-1:1; }); }
+function fmtDate(d){ var p=d.split("-"); var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+p[1]-1]; return p[2]+"-"+m+"-"+p[0]; }
+function fmtNum(v){ if(v==null||isNaN(v)) return "–"; return (Math.round(v*100)/100).toString(); }
+function flag(a,v){ if(v==null) return null; if(a.lo!=null && v<a.lo) return "lo"; if(a.hi!=null && v>a.hi) return "hi"; return "ok"; }
+function flagLabel(f){ return f==="hi"?"HIGH":f==="lo"?"LOW":"NORMAL"; }
+function rangeText(a){ if(a.lo!=null&&a.hi!=null&&a.lo!==0) return a.lo+" – "+a.hi+" "+a.unit; if(a.lo!=null&&a.hi!=null) return "≤ "+a.hi+" "+a.unit; if(a.hi!=null) return "< "+a.hi+" "+a.unit; if(a.lo!=null) return "> "+a.lo+" "+a.unit; return a.unit; }
+function series(id){ var out=[]; sortedResults().forEach(function(r){ if(r.values[id]!=null) out.push({date:r.date, v:r.values[id]}); }); return out; }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+function gaugeHTML(a,v){
+  var f=flag(a,v);
+  var lo=a.lo, hi=a.hi, span, s, e, pos;
+  if(lo!=null && hi!=null){ var w=hi-lo; s=lo-w*0.9; e=hi+w*0.9; }
+  else if(hi!=null){ s=0; e=hi*2.2; }
+  else if(lo!=null){ s=0; e=lo*2.2; }
+  else { return ''; }
+  span=e-s; if(span<=0) return '';
+  function pct(x){ return Math.max(0,Math.min(100,((x-s)/span)*100)); }
+  var bs=pct(lo!=null?lo:s), be=pct(hi!=null?hi:e);
+  return '<div class="gauge '+f+'"><div class="band" style="left:'+bs.toFixed(1)+'%;right:'+(100-be).toFixed(1)+'%"></div>'+
+         '<div class="pin" style="left:'+pct(v).toFixed(1)+'%"></div></div>';
+}
+
+function sparkSVG(pts,a){
+  if(pts.length<2) return '<svg class="spark"></svg>';
+  var vs=pts.map(function(p){return p.v;});
+  var mn=Math.min.apply(null,vs), mx=Math.max.apply(null,vs);
+  if(mn===mx){mn-=1;mx+=1;}
+  var pad=(mx-mn)*0.15; mn-=pad; mx+=pad;
+  var W=64,H=26;
+  var xy=pts.map(function(p,i){ return [(i/(pts.length-1))*(W-6)+3, H-3-((p.v-mn)/(mx-mn))*(H-6)]; });
+  var d=xy.map(function(c,i){return (i?"L":"M")+c[0].toFixed(1)+","+c[1].toFixed(1);}).join(" ");
+  var last=xy[xy.length-1];
+  var f=flag(a,pts[pts.length-1].v);
+  var col=f==="ok"?"var(--teal)":f==="hi"?"var(--hi)":"var(--lo)";
+  return '<svg class="spark" viewBox="0 0 64 26"><path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="1.8" stroke-linecap="round"/><circle cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="2.4" fill="'+col+'"/></svg>';
+}
+
+function deltaArrow(a,pts){
+  if(pts.length<2) return "";
+  var prev=pts[pts.length-2].v, cur=pts[pts.length-1].v;
+  if(cur===prev) return '<span class="arrow flat">→</span>';
+  var up=cur>prev;
+  var good = a.lowerBetter ? !up : a.higherBetter ? up : null;
+  var cls = up?"up":"down";
+  if(good===true) cls+=" good"; if(good===false) cls+=" bad";
+  var pct = prev!==0 ? Math.abs((cur-prev)/prev*100) : 0;
+  return '<span class="arrow '+cls+'">'+(up?"▲":"▼")+' '+(pct>=1?Math.round(pct)+"%":"")+'</span>';
+}
+
+function bigChartSVG(a){
+  var pts=series(a.id);
+  var nmed=(STATE.meds||[]).filter(function(md){return md.start;}).length;
+  var W=680,H=258+(nmed>1?(nmed-1)*17:0),PL=48,PR=16,PT=16,PB=44;
+  var vs=pts.map(function(p){return p.v;});
+  var mn=Math.min.apply(null,vs.concat(a.lo!=null?[a.lo]:[])), mx=Math.max.apply(null,vs.concat(a.hi!=null?[a.hi]:[]));
+  if(!isFinite(mn)){mn=0;mx=1;}
+  if(mn===mx){mn-=1;mx+=1;}
+  var pad=(mx-mn)*0.12; mn-=pad; mx+=pad; if(mn<0 && Math.min.apply(null,vs)>=0) mn=0;
+
+  // --- time-proportional x axis ---
+  var t0=+new Date(pts[0].date), t1=+new Date(pts[pts.length-1].date), span=t1-t0;
+  function XT(dateStr){
+    if(pts.length<2 || span<=0) return (PL+W-PR)/2;
+    return PL + ((+new Date(dateStr)-t0)/span)*(W-PL-PR);
+  }
+  function X(i){ return XT(pts[i].date); }
+  function Y(v){ return PT+(1-(v-mn)/(mx-mn))*(H-PT-PB); }
+
+  var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;min-width:320px" xmlns="http://www.w3.org/2000/svg">';
+  if(a.lo!=null || a.hi!=null){
+    var bLo=a.lo!=null?a.lo:mn, bHi=a.hi!=null?a.hi:mx;
+    s+='<rect x="'+PL+'" y="'+Y(bHi)+'" width="'+(W-PL-PR)+'" height="'+Math.max(0,(Y(bLo)-Y(bHi)))+'" fill="var(--cy)" opacity="0.07"/>';
+    if(a.lo!=null&&a.lo>mn) s+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(a.lo)+'" y2="'+Y(a.lo)+'" stroke="var(--cy)" stroke-dasharray="3 5" opacity=".45"/>';
+    if(a.hi!=null&&a.hi<mx) s+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+Y(a.hi)+'" y2="'+Y(a.hi)+'" stroke="var(--cy)" stroke-dasharray="3 5" opacity=".45"/>';
+  }
+  for(var g=0;g<=4;g++){ var gv=mn+(mx-mn)*g/4, gy=Y(gv);
+    s+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+gy+'" y2="'+gy+'" stroke="var(--line)" stroke-width="1" opacity=".7"/>';
+    s+='<text x="'+(PL-6)+'" y="'+(gy+4)+'" text-anchor="end" font-size="11" fill="var(--fg-3)">'+fmtNum(gv)+'</text>';
+  }
+
+  // medication markers, placed by real date (labels stacked when they cluster)
+  var placed=[];
+  (STATE.meds||[]).forEach(function(md){
+    if(!md.start || pts.length<2 || span<=0) return;
+    if(md.start<pts[0].date || md.start>pts[pts.length-1].date) return;
+    placed.push({x:XT(md.start), name:md.name});
+  });
+  placed.sort(function(p,q){ return p.x-q.x; });
+  var rows=[];   // label rows, each holds the right edge used so far
+  placed.forEach(function(mk){
+    var lbl=mk.name, tw=lbl.length*5.6+10;
+    var lx=Math.min(Math.max(mk.x-tw/2, PL), W-PR-tw);
+    var row=0;
+    while(rows[row]!==undefined && lx < rows[row]+3) row++;   // drop to next row if it would collide
+    rows[row]=lx+tw;
+    var ly=PT-2+row*17;
+    s+='<line x1="'+mk.x.toFixed(1)+'" x2="'+mk.x.toFixed(1)+'" y1="'+(ly+15)+'" y2="'+(H-PB)+'" stroke="var(--mag)" stroke-width="1.5" stroke-dasharray="5 4" opacity="'+(0.9-row*0.12).toFixed(2)+'"/>';
+    s+='<rect x="'+lx.toFixed(1)+'" y="'+ly+'" width="'+tw.toFixed(1)+'" height="15" rx="7" fill="var(--mag)"/>';
+    s+='<text x="'+(lx+tw/2).toFixed(1)+'" y="'+(ly+11)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">'+esc(lbl)+'</text>';
+  });
+  var medRows = rows.length;
+
+  if(pts.length>1){
+    var P=pts.map(function(p,i){ return [X(i), Y(p.v)]; });
+    var d="M"+P[0][0].toFixed(1)+","+P[0][1].toFixed(1);
+    for(var k=0;k<P.length-1;k++){
+      var p0=P[k?k-1:0], p1=P[k], p2=P[k+1], p3=P[k+2]||p2;
+      var t=0.22;
+      var c1=[p1[0]+(p2[0]-p0[0])*t, p1[1]+(p2[1]-p0[1])*t];
+      var c2=[p2[0]-(p3[0]-p1[0])*t, p2[1]-(p3[1]-p1[1])*t];
+      d+="C"+c1[0].toFixed(1)+","+c1[1].toFixed(1)+" "+c2[0].toFixed(1)+","+c2[1].toFixed(1)+" "+p2[0].toFixed(1)+","+p2[1].toFixed(1);
+    }
+    var gid="g"+a.id;
+    s+='<defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1">'+
+       '<stop offset="0%" stop-color="var(--cy)" stop-opacity="0.30"/>'+
+       '<stop offset="100%" stop-color="var(--cy)" stop-opacity="0"/></linearGradient></defs>';
+    s+='<path d="'+d+"L"+P[P.length-1][0].toFixed(1)+","+(H-PB)+"L"+P[0][0].toFixed(1)+","+(H-PB)+'Z" fill="url(#'+gid+')"/>';
+    s+='<path d="'+d+'" fill="none" stroke="var(--cy)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>';
+  }
+
+  // thin out crowded labels so dense clusters stay readable
+  var lastV=-999, lastD=-999;
+  pts.forEach(function(p,i){
+    var x=X(i), f=flag(a,p.v);
+    var col=f==="ok"?"var(--teal)":f==="hi"?"var(--hi)":"var(--lo)";
+    if(i===pts.length-1) s+='<circle cx="'+x.toFixed(1)+'" cy="'+Y(p.v)+'" r="9" fill="'+col+'" opacity=".18"/>';
+    s+='<circle cx="'+x.toFixed(1)+'" cy="'+Y(p.v)+'" r="4.3" fill="'+col+'" stroke="var(--panel)" stroke-width="2"/>';
+    var edge=(i===0||i===pts.length-1);
+    if(edge || x-lastV>=34){
+      s+='<text x="'+x.toFixed(1)+'" y="'+(Y(p.v)-9)+'" text-anchor="middle" font-size="11" font-weight="700" fill="var(--fg)">'+fmtNum(p.v)+'</text>';
+      lastV=x;
+    }
+    if(edge || x-lastD>=62){
+      var anch = i===0?"start" : (i===pts.length-1?"end":"middle");
+      var tx = i===0?PL-2 : (i===pts.length-1?W-PR+2:x);
+      s+='<text x="'+tx.toFixed(1)+'" y="'+(H-14)+'" text-anchor="'+anch+'" font-size="10" fill="var(--fg-3)">'+fmtDate(p.date)+'</text>';
+      lastD=x;
+    }
+    s+='<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+(H-PB)+'" y2="'+(H-PB+4)+'" stroke="var(--line)"/>';
+  });
+  if(pts.length>1) s+='<text x="'+((PL+W-PR)/2)+'" y="'+(H-2)+'" text-anchor="middle" font-size="9.5" fill="var(--fg-3)">spacing follows real time</text>';
+  s+='</svg>';
+  return s;
+}
+
+function analyteRow(a){
+  var pts=series(a.id);
+  if(!pts.length) return "";
+  var cur=pts[pts.length-1];
+  var f=flag(a,cur.v);
+  return '<div class="row" data-open="'+a.id+'">'+
+    '<div class="nm"><b>'+esc(a.name)+(a.desc?'<span class="q">?</span>':'')+'</b><span>'+esc(rangeText(a))+'</span></div>'+
+    '<div class="val"><span>'+deltaArrow(a,pts)+'</span><b>'+fmtNum(cur.v)+'</b>'+
+      '<span class="chip '+f+'">'+flagLabel(f)+'</span></div>'+
+    gaugeHTML(a,cur.v)+'</div>';
+}
+
+function renderDash(root){
+  var rs=sortedResults();
+  if(!rs.length){ root.innerHTML='<div class="empty">No results yet. Add your first lab report.</div>'; return; }
+  var latest=rs[rs.length-1];
+  var counts={ok:0,hi:0,lo:0};
+  var abn=[];
+  STATE.analytes.forEach(function(a){
+    var v=latest.values[a.id]; if(v==null) return;
+    var f=flag(a,v); counts[f]++;
+    if(f!=="ok") abn.push(a);
+  });
+  document.getElementById("hdrSub").textContent=fmtDate(latest.date);
+  var nflag=buildFlags().filter(function(x){return x.pri<3;}).length;
+  var h = nflag ? '<div class="card" id="docjump" style="cursor:pointer;border-left:4px solid var(--mag)"><h2 style="margin:0">'+nflag+' item'+(nflag===1?'':'s')+' to raise with your doctor →</h2></div>' : '';
+  h+='<div class="kpis">'+
+    '<div class="kpi ok"><div class="n">'+counts.ok+'</div><div class="l">Within range</div></div>'+
+    '<div class="kpi hi"><div class="n">'+counts.hi+'</div><div class="l">High</div></div>'+
+    '<div class="kpi lo"><div class="n">'+counts.lo+'</div><div class="l">Low</div></div></div>';
+  if(abn.length){
+    h+='<div class="card abn-list"><h2>Outside the reference range ('+fmtDate(latest.date)+')</h2>';
+    abn.forEach(function(a){ h+=analyteRow(a); });
+    h+='</div>';
+  }
+  var cats=[]; STATE.analytes.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
+  cats.forEach(function(c){
+    var rows=STATE.analytes.filter(function(a){return a.cat===c && series(a.id).length;}).map(analyteRow).join("");
+    if(rows) h+='<div class="card"><h2>'+esc(c)+'</h2>'+rows+'</div>';
+  });
+  root.innerHTML=h;
+  var dj=document.getElementById("docjump");
+  if(dj) dj.onclick=function(){ TAB="doc"; render(); window.scrollTo(0,0); };
+}
+
+function renderTrends(root){
+  var cats=["All"]; STATE.analytes.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
+  var h='<div class="seg">'+cats.map(function(c){return '<button data-cat="'+esc(c)+'" class="'+(c===TRENDCAT?"on":"")+'">'+esc(c)+'</button>';}).join("")+'</div>';
+  h+='<button class="btn" id="tr-pdf" style="margin:2px 0 12px">Export these trends</button>';
+  var list=STATE.analytes.filter(function(a){ return (TRENDCAT==="All"||a.cat===TRENDCAT) && series(a.id).length>=1; });
+  if(!list.length) h+='<div class="empty">No data in this category yet.</div>';
+  list.forEach(function(a){
+    var pts=series(a.id); var cur=pts[pts.length-1]; var f=flag(a,cur.v);
+    h+='<div class="card"><h2>'+esc(a.name)+' <span class="chip '+f+'" style="float:right">'+flagLabel(f)+'</span></h2>'+
+       '<div class="note" style="margin:0 0 6px">Ref: '+esc(rangeText(a))+'</div>'+
+       '<div class="chartbox">'+bigChartSVG(a)+'</div></div>';
+  });
+  root.innerHTML=h;
+  document.getElementById("tr-pdf").onclick=openExportPicker;
+  root.querySelectorAll("[data-cat]").forEach(function(b){ b.onclick=function(){ TRENDCAT=b.getAttribute("data-cat"); render(); }; });
+}
+
+function renderAdd(root, editDate){
+  var editing = editDate ? STATE.results.filter(function(r){return r.date===editDate;})[0] : null;
+  var cats=[]; STATE.analytes.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
+  var h='<div class="card"><h2>'+(editing?"Edit Result — "+fmtDate(editDate):"Add a result")+'</h2>'+
+    '<div class="grid2 dategrid"><div><label>Report date</label><input type="date" id="f-date" value="'+(editing?editing.date:"")+'" '+(editing?"disabled":"")+'></div>'+
+    '<div><label>Lab / facility</label><input type="text" id="f-lab" placeholder="Optional" value="'+(editing&&editing.lab?esc(editing.lab):"")+'"></div></div>'+
+    '<div class="note">Enter only the tests on this report — leave the rest blank. Check that the units match the label on each field; some labs report CRP in mg/L, which is 10&times; the mg/dL value used here.</div></div>';
+  cats.forEach(function(c){
+    h+='<div class="card"><h2>'+esc(c)+'</h2><div class="grid2">';
+    STATE.analytes.filter(function(a){return a.cat===c;}).forEach(function(a){
+      var v = editing && editing.values[a.id]!=null ? editing.values[a.id] : "";
+      h+='<div><label>'+esc(a.name)+' <span style="font-weight:400">('+esc(a.unit)+')</span></label><input type="number" step="any" inputmode="decimal" data-an="'+a.id+'" value="'+v+'"></div>';
+    });
+    h+='</div></div>';
+  });
+  h+='<button class="btn" id="f-save">'+(editing?"Save Changes":"Save Result")+'</button>';
+  if(editing) h+='<button class="btn ghost" id="f-cancel">Cancel</button>';
+  root.innerHTML=h;
+  document.getElementById("f-save").onclick=function(){
+    var date = editing ? editing.date : document.getElementById("f-date").value;
+    if(!date){ alert("Select the report date."); return; }
+    var vals={};
+    root.querySelectorAll("input[data-an]").forEach(function(inp){
+      if(inp.value!=="" && !isNaN(parseFloat(inp.value))) vals[inp.getAttribute("data-an")]=parseFloat(inp.value);
+    });
+    if(!Object.keys(vals).length){ alert("Enter at least one value."); return; }
+    var lab=document.getElementById("f-lab").value.trim();
+    STATE.results = STATE.results.filter(function(r){return r.date!==date;});
+    STATE.results.push({date:date, lab:lab, values:vals});
+    persist(); TAB="dash"; render();
+  };
+  if(editing) document.getElementById("f-cancel").onclick=function(){ TAB="data"; render(); };
+}
+
+function renderData(root){
+  var rs=sortedResults().slice().reverse();
+  var h='<div class="card"><h2>Saved reports ('+rs.length+')</h2>';
+  if(!rs.length) h+='<div class="empty">Nothing saved yet.</div>';
+  rs.forEach(function(r){
+    var n=Object.keys(r.values).length;
+    h+='<div class="datecard"><div><b>'+fmtDate(r.date)+'</b><span>'+n+' tests'+(r.lab?" · "+esc(r.lab):"")+'</span></div>'+
+       '<div><button class="mini-btn" data-edit="'+r.date+'">Edit</button><button class="mini-btn del" data-del="'+r.date+'">Delete</button></div></div>';
+  });
+  h+='</div>';
+  h+='<div class="card"><h2>On your other devices</h2>'+
+     '<div class="note" style="margin:0 0 8px">Your results sync to your account, so opening this link on any phone, tablet or computer shows the same data. '+
+     'To get an icon on your home screen: <b>iPhone</b> — open in Safari, tap Share, then Add to Home Screen. '+
+     '<b>Android</b> — open in Chrome, tap the menu, then Install app or Add to Home screen. '+
+     '<b>Desktop</b> — bookmark it, or use Chrome&rsquo;s install icon in the address bar.</div></div>'+
+     '<div class="card"><h2>Export</h2><div class="note" style="margin:0 0 8px">Full report: medications, items to discuss, every current value, and trend charts.</div>'+
+     '<button class="btn" id="d-pdf">Export PDF / Print</button></div>'+
+     '<div class="card"><h2>Backup</h2><button class="btn ghost" id="d-export" style="margin-top:4px">Copy data (JSON) to clipboard</button>'+
+     '<label>Restore from JSON</label><input type="text" id="d-import" placeholder="Paste JSON here"><button class="btn ghost" id="d-importbtn">Import</button></div>';
+  root.innerHTML=h;
+  root.querySelectorAll("[data-del]").forEach(function(b){ b.onclick=function(){
+    var d=b.getAttribute("data-del");
+    if(confirm("Delete the "+fmtDate(d)+" report?")){ STATE.results=STATE.results.filter(function(r){return r.date!==d;}); persist(); render(); }
+  };});
+  root.querySelectorAll("[data-edit]").forEach(function(b){ b.onclick=function(){
+    TAB="add"; render(b.getAttribute("data-edit"));
+  };});
+  document.getElementById("d-pdf").onclick=doPrint;
+  document.getElementById("d-export").onclick=function(){
+    var txt=JSON.stringify(STATE);
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){alert("Copied.");},function(){prompt("Copy:",txt);}); }
+    else prompt("Copy:",txt);
+  };
+  document.getElementById("d-importbtn").onclick=function(){
+    try{ var s=JSON.parse(document.getElementById("d-import").value);
+      if(s&&s.analytes&&s.results){ STATE=s; STATE.analytes.forEach(function(a){byId[a.id]=a;}); persist(); render(); }
+      else alert("Invalid data.");
+    }catch(e){ alert("Invalid JSON."); }
+  };
+}
+
+function openModal(id){
+  var a=byId[id]; if(!a) return;
+  var pts=series(id);
+  var rows=pts.slice().reverse().map(function(p){
+    var f=flag(a,p.v);
+    return '<tr><td>'+fmtDate(p.date)+'</td><td><b>'+fmtNum(p.v)+'</b> '+esc(a.unit)+'</td><td><span class="chip '+f+'">'+flagLabel(f)+'</span></td></tr>';
+  }).join("");
+  var about = a.desc ? '<div class="about"><p>'+esc(a.desc)+'</p>'+(a.hint?'<p class="hint">'+esc(a.hint)+'</p>':'')+'</div>' : '';
+  document.getElementById("sheet").innerHTML=
+    '<h3>'+esc(a.name)+'</h3><div class="rng">Reference '+esc(rangeText(a))+'</div>'+
+    '<div style="margin:-4px 0 18px">'+gaugeHTML(a,pts[pts.length-1].v)+'</div>'+about+
+    '<div class="chartbox">'+bigChartSVG(a)+'</div>'+
+    '<table class="hist"><tr><th>Date</th><th>Result</th><th>Status</th></tr>'+rows+'</table>'+
+    '<button class="btn ghost" id="m-close">Close</button>';
+  document.getElementById("modal").classList.add("open");
+  document.getElementById("m-close").onclick=closeModal;
+}
+function closeModal(){ document.getElementById("modal").classList.remove("open"); }
+document.getElementById("modal").addEventListener("click",function(e){ if(e.target===this) closeModal(); });
+
+function buildDocumentHTML(){
+  var clone=document.documentElement.cloneNode(true);
+  var st=clone.querySelector("#app-state");
+  st.textContent=JSON.stringify(STATE).replace(/<\//g,"<\\/");
+  clone.querySelector("#root").innerHTML="";
+  clone.querySelector("#sheet").innerHTML="";
+  var m=clone.querySelector("#modal"); if(m) m.classList.remove("open");
+  var b=clone.querySelector("#localBanner"); if(b) b.classList.remove("show");
+  clone.querySelectorAll(".tabs button").forEach(function(btn,i){ btn.classList.toggle("active",i===0); });
+  return "<!DOCTYPE html>\n"+clone.outerHTML;
+}
+
+function persist(){ SB.save(); }
+
+function render(editDate){
+  var root=document.getElementById("root");
+  if(TAB==="dash") renderDash(root);
+  else if(TAB==="trends") renderTrends(root);
+  else if(TAB==="add") renderAdd(root, editDate);
+  else if(TAB==="doc") renderDoc(root);
+  else if(TAB==="meds") renderMeds(root);
+  else renderData(root);
+  document.querySelectorAll(".tabs button").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-tab")===TAB); });
+  root.querySelectorAll("[data-open]").forEach(function(r){ r.onclick=function(){ openModal(r.getAttribute("data-open")); }; });
+}
+document.querySelectorAll(".tabs button").forEach(function(b){
+  b.onclick=function(){ TAB=b.getAttribute("data-tab"); render(); window.scrollTo(0,0); };
+});
+render();
+  })();
+}
+</script>
+</body>
+</html>
