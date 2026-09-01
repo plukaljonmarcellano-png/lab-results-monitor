@@ -22,6 +22,12 @@
   --hi:#FF5C7A; --hi-bg:rgba(255,92,122,.13);
   --lo:#F0B429; --lo-bg:rgba(240,180,41,.13);
   --mag:#E0489B;
+  /* severity ramp - hue encodes HOW FAR out of range, not which direction */
+  --s0:#34D399; --s0-bg:rgba(52,211,153,.13);
+  --s1:#F7CE3E; --s1-bg:rgba(247,206,62,.13);
+  --s2:#FF8A2B; --s2-bg:rgba(255,138,43,.20);
+  --s3:#FF5C7A; --s3-bg:rgba(255,92,122,.16);
+  --s4:#FF2D62; --s4-solid:#E11D48; --s4-fg:#FFF1F4;
   --r:18px; --r-sm:12px;
 }
 :root[data-theme="light"], :root:not([data-theme="dark"]){}
@@ -34,6 +40,11 @@
     --hi:#D62B54; --hi-bg:rgba(214,43,84,.10);
     --lo:#A5720B; --lo-bg:rgba(165,114,11,.12);
     --mag:#C0247D;
+    --s0:#12855C; --s0-bg:rgba(18,133,92,.10);
+    --s1:#8A6B00; --s1-bg:rgba(214,168,0,.20);
+    --s2:#C2410C; --s2-bg:rgba(234,88,12,.17);
+    --s3:#D62B54; --s3-bg:rgba(214,43,84,.11);
+    --s4:#B00D33; --s4-solid:#B00D33; --s4-fg:#FFFFFF;
   }
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -83,8 +94,37 @@ header .sub{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:6px;
 .kpi .n{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1}
 .kpi .l{font-size:11.5px;color:var(--fg-2);margin-top:6px;font-weight:600}
 .kpi.ok .n{color:var(--ok)} .kpi.hi .n{color:var(--hi)} .kpi.lo .n{color:var(--lo)}
+.kpi.s0 .n{color:var(--s0)} .kpi.s1 .n{color:var(--s1)} .kpi.s3 .n{color:var(--s3)}
 .kpi:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;opacity:.55}
 .kpi.ok:after{background:var(--ok)} .kpi.hi:after{background:var(--hi)} .kpi.lo:after{background:var(--lo)}
+.kpi.s0:after{background:var(--s0)} .kpi.s1:after{background:var(--s1)} .kpi.s3:after{background:var(--s3)}
+
+/* ---------- critical banner ---------- */
+.critbar{
+  background:var(--s4-solid);color:var(--s4-fg);border-radius:var(--r-sm);
+  padding:13px 15px;margin-bottom:12px;cursor:pointer;
+  display:flex;align-items:center;gap:11px;font-weight:700;font-size:14.5px;
+  box-shadow:0 6px 20px rgba(225,29,72,.28);
+}
+.critbar .dot{
+  width:9px;height:9px;border-radius:50%;background:var(--s4-fg);flex:none;
+  animation:cpulse 1.6s ease-in-out infinite;
+}
+.critbar .go{margin-left:auto;opacity:.85;font-weight:800}
+@keyframes cpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+@media (prefers-reduced-motion:reduce){.critbar .dot{animation:none}}
+
+/* ---------- severity legend ---------- */
+.legend{
+  display:flex;flex-wrap:wrap;gap:6px 14px;padding:11px 13px;margin-bottom:12px;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);
+}
+.legend .lg{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--fg-2)}
+.legend .sw{width:9px;height:9px;border-radius:3px;flex:none}
+.legend .lg.l0 .sw{background:var(--s0)} .legend .lg.l1 .sw{background:var(--s1)}
+.legend .lg.l2 .sw{background:var(--s2)} .legend .lg.l3 .sw{background:var(--s3)}
+.legend .lg.l4 .sw{background:var(--s4-solid)}
+.legend .note{flex-basis:100%;font-size:11px;color:var(--fg-3);line-height:1.45;margin-top:2px}
 
 /* ---------- result row + signature gauge ---------- */
 .row{
@@ -110,11 +150,26 @@ header .sub{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:6px;
 .gauge.ok .pin{background:var(--ok);box-shadow:0 0 10px var(--ok-bg)}
 .gauge.hi .pin{background:var(--hi);box-shadow:0 0 10px rgba(255,92,122,.5)}
 .gauge.lo .pin{background:var(--lo);box-shadow:0 0 10px rgba(240,180,41,.5)}
+.gauge.s0 .pin{background:var(--s0);box-shadow:0 0 10px var(--s0-bg)}
+.gauge.s1 .pin{background:var(--s1);box-shadow:0 0 10px rgba(240,180,41,.55)}
+.gauge.s2 .pin{background:var(--s2);box-shadow:0 0 10px rgba(255,138,43,.6)}
+.gauge.s2 .pin,.gauge.s3 .pin{width:4px;transform:translateX(-2px)}
+.gauge.s3 .pin{background:var(--s3);box-shadow:0 0 10px rgba(255,92,122,.55)}
+.gauge.s4 .pin{background:var(--s4-solid);width:5px;height:15px;top:-4.5px;transform:translateX(-2.5px);box-shadow:0 0 12px rgba(225,29,72,.85)}
+.gauge .edge{position:absolute;top:-1px;bottom:-1px;width:1px;background:var(--line-2)}
 
 .chip{font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:99px;white-space:nowrap;letter-spacing:.01em}
 .chip.ok{background:var(--ok-bg);color:var(--ok)}
 .chip.hi{background:var(--hi-bg);color:var(--hi)}
 .chip.lo{background:var(--lo-bg);color:var(--lo)}
+.chip.s0{background:var(--s0-bg);color:var(--s0)}
+.chip.s1{background:var(--s1-bg);color:var(--s1)}
+.chip.s2{background:var(--s2-bg);color:var(--s2);box-shadow:inset 0 0 0 1px var(--s2)}
+.chip.s3{background:var(--s3-bg);color:var(--s3);box-shadow:inset 0 0 0 1.5px var(--s3)}
+.chip.s4{background:var(--s4-solid);color:var(--s4-fg);box-shadow:0 0 0 3px rgba(225,29,72,.20)}
+.chip.na{background:var(--panel-2);color:var(--fg-3)}
+.row .val{flex-wrap:wrap}
+@media (max-width:360px){ .chip{font-size:10px;padding:3px 7px} }
 
 .spark{width:0;height:0;display:none}   /* replaced by the gauge */
 .arrow{font-size:12px;font-weight:700}
@@ -250,6 +305,11 @@ footer{padding:18px;text-align:center;font-size:11.5px;color:var(--fg-3);line-he
   #printview td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   #printview .st{font-weight:800;font-size:8.5pt}
   #printview .st.hi{color:#C22348} #printview .st.lo{color:#8a5f04} #printview .st.ok{color:#12855C}
+  #printview .st.s0{color:#12855C} #printview .st.s1{color:#8a5f04} #printview .st.s2{color:#B85C09}
+  #printview .st.s3{color:#C22348}
+  #printview .st.s4{color:#FFFFFF;background:#B00D33;padding:1px 5px;border-radius:3px}
+  #printview .leg{font-size:8pt;color:#444;margin:4px 0 10px}
+  #printview .leg b{color:#000}
   #printview .fl{border:1px solid #dde6e6;border-left:3px solid #C0247D;border-radius:6px;padding:9px 11px;margin-bottom:8px;page-break-inside:avoid}
   #printview .fl b{font-size:10.5pt}
   #printview .fl .w{font-size:9pt;color:#444;margin-top:3px}
@@ -455,12 +515,89 @@ function fmtDate(d){ var p=d.split("-"); var m=["Jan","Feb","Mar","Apr","May","J
 function fmtNum(v){ if(v==null||isNaN(v)) return "–"; return (Math.round(v*100)/100).toString(); }
 function flag(a,v){ if(v==null) return null; if(a.lo!=null && v<a.lo) return "lo"; if(a.hi!=null && v>a.hi) return "hi"; return "ok"; }
 function flagLabel(f){ return f==="hi"?"HIGH":f==="lo"?"LOW":"NORMAL"; }
+
+/* ================= SEVERITY MODEL =================================================
+   Colour encodes HOW FAR a value sits from its reference range; the text label carries
+   the direction. Deviation is normalised to the WIDTH of the reference range, so a
+   wide-range analyte (Ferritin 21.8-274.6) and a tight one (Sodium 136-145) are graded
+   on the same scale. Single-bounded analytes normalise against the bound itself.
+
+   Level 0 NORMAL      inside the range, clear of both limits
+   Level 1 BORDERLINE  inside the range but within 10% of range-width of a limit
+   Level 2 mild        outside by up to 50% of range-width
+   Level 3 MARKED      outside by 50-150% of range-width
+   Level 4 CRITICAL    a published adult critical ("panic") value is breached,
+                       or outside by more than 150% of range-width
+
+   CRITICAL VALUES BELOW ARE CONVENTIONAL ADULT ALERT THRESHOLDS, NOT LAB-SPECIFIC.
+   Every laboratory publishes its own critical-value list and they differ. Confirm
+   these against the issuing lab's list before relying on them. This app is a personal
+   record, not a diagnostic device.
+   ================================================================================== */
+var CRIT = {
+  k:{lo:2.5,hi:6.5},        na:{lo:120,hi:160},     cl:{lo:80,hi:115},
+  ca:{lo:6.5,hi:13},        cas:{lo:6.5,hi:13},
+  hgb:{lo:7,hi:20},         hct:{lo:21,hi:60},      plt:{lo:20,hi:1000},
+  wbc:{lo:1.5,hi:30},       neut:{lo:0.5,hi:null},
+  crea:{lo:null,hi:4},      gfr:{lo:15,hi:null},    bun:{lo:null,hi:100},
+  alt:{lo:null,hi:500},     ast:{lo:null,hi:500},
+  trop:{lo:null,hi:100},    tsh:{lo:0.01,hi:20},
+  vitd:{lo:10,hi:150},      b12:{lo:100,hi:null},
+  ferr:{lo:null,hi:1000},   ua:{lo:null,hi:13},     crp:{lo:null,hi:10},
+  hba1c:{lo:null,hi:10},    sys:{lo:90,hi:180},     dia:{lo:50,hi:120}
+};
+
+var SEV = [
+  {k:"s0", t:"NORMAL",     full:"Within the reference range"},
+  {k:"s1", t:"BORDERLINE", full:"Inside the range, but close to the limit"},
+  {k:"s2", t:"",           full:"Outside the reference range"},
+  {k:"s3", t:"MARKED",     full:"Well outside the reference range"},
+  {k:"s4", t:"CRITICAL",   full:"Critical value - seek medical advice promptly"}
+];
+
+var SEV_BORDER = 0.10, SEV_MILD = 0.50, SEV_MARKED = 1.50;
+
+function sevOf(a,v){
+  if(v==null) return {lvl:-1,dir:null,cls:"na",chip:"\u2014",label:"No data",dev:null,crit:false};
+  var lo=a.lo, hi=a.hi, c=CRIT[a.id]||{};
+  function mk(lvl,dir,dev,crit){
+    var word=SEV[lvl].t, dt=dir==="hi"?"HIGH":dir==="lo"?"LOW":"";
+    var chip = lvl===0 ? "NORMAL" : (word ? (word+(dt?" "+dt:"")) : dt);
+    return {lvl:lvl,dir:dir,cls:SEV[lvl].k,chip:chip,label:SEV[lvl].full,dev:dev,crit:!!crit};
+  }
+  if(c.lo!=null && v<c.lo) return mk(4,"lo",null,true);
+  if(c.hi!=null && v>c.hi) return mk(4,"hi",null,true);
+  var span=(lo!=null&&hi!=null&&hi>lo)?(hi-lo):null;
+  function unit(b){ return span!=null?span:(Math.abs(b)||1); }
+  var d;
+  if(hi!=null && v>hi){ d=(v-hi)/unit(hi); return mk(d>SEV_MARKED?4:d>SEV_MILD?3:2,"hi",d,false); }
+  if(lo!=null && v<lo){ d=(lo-v)/unit(lo); return mk(d>SEV_MARKED?4:d>SEV_MILD?3:2,"lo",d,false); }
+  if(hi!=null && (hi-v)/unit(hi)<=SEV_BORDER) return mk(1,"hi",0,false);
+  if(lo!=null && (v-lo)/unit(lo)<=SEV_BORDER) return mk(1,"lo",0,false);
+  return mk(0,null,0,false);
+}
+function sevChip(a,v){ var s=sevOf(a,v); return '<span class="chip '+s.cls+'">'+s.chip+'</span>'; }
+function sevDevText(s){
+  if(s.crit) return "breaches a critical threshold";
+  if(s.dev==null||s.lvl<2) return "";
+  return "out by "+Math.round(s.dev*100)+"% of the range width";
+}
+function legendHTML(){
+  return '<div class="legend">'+
+    '<div class="lg l0"><span class="sw"></span>Normal</div>'+
+    '<div class="lg l1"><span class="sw"></span>Borderline</div>'+
+    '<div class="lg l2"><span class="sw"></span>Out of range</div>'+
+    '<div class="lg l3"><span class="sw"></span>Marked</div>'+
+    '<div class="lg l4"><span class="sw"></span>Critical</div>'+
+    '<div class="note">Colour shows how far a result sits from its reference range, scaled to the width of that range. The label carries the direction. Critical thresholds are general adult alert values, not your laboratory\u2019s own list \u2014 always confirm with your doctor.</div>'+
+  '</div>';
+}
 function rangeText(a){ if(a.lo!=null&&a.hi!=null&&a.lo!==0) return a.lo+" – "+a.hi+" "+a.unit; if(a.lo!=null&&a.hi!=null) return "≤ "+a.hi+" "+a.unit; if(a.hi!=null) return "< "+a.hi+" "+a.unit; if(a.lo!=null) return "> "+a.lo+" "+a.unit; return a.unit; }
 function series(id){ var out=[]; sortedResults().forEach(function(r){ if(r.values[id]!=null) out.push({date:r.date, v:r.values[id]}); }); return out; }
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
 function gaugeHTML(a,v){
-  var f=flag(a,v);
+  var f=sevOf(a,v).cls;
   var lo=a.lo, hi=a.hi, span, s, e, pos;
   if(lo!=null && hi!=null){ var w=hi-lo; s=lo-w*0.9; e=hi+w*0.9; }
   else if(hi!=null){ s=0; e=hi*2.2; }
@@ -469,8 +606,11 @@ function gaugeHTML(a,v){
   span=e-s; if(span<=0) return '';
   function pct(x){ return Math.max(0,Math.min(100,((x-s)/span)*100)); }
   var bs=pct(lo!=null?lo:s), be=pct(hi!=null?hi:e);
+  var edges='';
+  if(lo!=null) edges+='<div class="edge" style="left:'+bs.toFixed(1)+'%"></div>';
+  if(hi!=null) edges+='<div class="edge" style="left:'+be.toFixed(1)+'%"></div>';
   return '<div class="gauge '+f+'"><div class="band" style="left:'+bs.toFixed(1)+'%;right:'+(100-be).toFixed(1)+'%"></div>'+
-         '<div class="pin" style="left:'+pct(v).toFixed(1)+'%"></div></div>';
+         edges+'<div class="pin" style="left:'+pct(v).toFixed(1)+'%"></div></div>';
 }
 
 function sparkSVG(pts,a){
@@ -600,11 +740,10 @@ function analyteRow(a){
   var pts=series(a.id);
   if(!pts.length) return "";
   var cur=pts[pts.length-1];
-  var f=flag(a,cur.v);
   return '<div class="row" data-open="'+a.id+'">'+
     '<div class="nm"><b>'+esc(a.name)+(a.desc?'<span class="q">?</span>':'')+'</b><span>'+esc(rangeText(a))+'</span></div>'+
     '<div class="val"><span>'+deltaArrow(a,pts)+'</span><b>'+fmtNum(cur.v)+'</b>'+
-      '<span class="chip '+f+'">'+flagLabel(f)+'</span></div>'+
+      sevChip(a,cur.v)+'</div>'+
     gaugeHTML(a,cur.v)+'</div>';
 }
 
@@ -612,22 +751,31 @@ function renderDash(root){
   var rs=sortedResults();
   if(!rs.length){ root.innerHTML='<div class="empty">No results yet. Add your first lab report.</div>'; return; }
   var latest=rs[rs.length-1];
-  var counts={ok:0,hi:0,lo:0};
-  var abn=[];
+  var counts={norm:0,bord:0,out:0,crit:0};
+  var abn=[], crits=[];
   STATE.analytes.forEach(function(a){
     var v=latest.values[a.id]; if(v==null) return;
-    var f=flag(a,v); counts[f]++;
-    if(f!=="ok") abn.push(a);
+    var s=sevOf(a,v);
+    if(s.lvl===0) counts.norm++;
+    else if(s.lvl===1) counts.bord++;
+    else { counts.out++; abn.push({a:a,lvl:s.lvl,dev:s.dev||0}); }
+    if(s.lvl===4){ counts.crit++; crits.push(a); }
   });
+  abn.sort(function(x,y){ return (y.lvl-x.lvl) || (y.dev-x.dev); });
+  abn = abn.map(function(x){ return x.a; });
   document.getElementById("hdrSub").textContent=fmtDate(latest.date);
   var nflag=buildFlags().filter(function(x){return x.pri<3;}).length;
   var h = nflag ? '<div class="card" id="docjump" style="cursor:pointer;border-left:4px solid var(--mag)"><h2 style="margin:0">'+nflag+' item'+(nflag===1?'':'s')+' to raise with your doctor →</h2></div>' : '';
+  if(counts.crit){
+    h+='<div class="critbar" id="critbar"><span class="dot"></span>'+counts.crit+' critical value'+(counts.crit===1?'':'s')+' \u2014 discuss with a doctor promptly<span class="go">\u203a</span></div>';
+  }
   h+='<div class="kpis">'+
-    '<div class="kpi ok" data-kpi="ok"><div class="n">'+counts.ok+'</div><div class="l">Within range</div></div>'+
-    '<div class="kpi hi" data-kpi="hi"><div class="n">'+counts.hi+'</div><div class="l">High</div></div>'+
-    '<div class="kpi lo" data-kpi="lo"><div class="n">'+counts.lo+'</div><div class="l">Low</div></div></div>';
+    '<div class="kpi s0" data-kpi="norm"><div class="n">'+counts.norm+'</div><div class="l">Within range</div></div>'+
+    '<div class="kpi s1" data-kpi="bord"><div class="n">'+counts.bord+'</div><div class="l">Borderline</div></div>'+
+    '<div class="kpi s3" data-kpi="out"><div class="n">'+counts.out+'</div><div class="l">Out of range</div></div></div>';
+  h+=legendHTML();
   if(abn.length){
-    h+='<div class="card abn-list"><h2>Outside the reference range ('+fmtDate(latest.date)+')</h2>';
+    h+='<div class="card abn-list"><h2>Outside the reference range ('+fmtDate(latest.date)+') \u2014 most severe first</h2>';
     abn.forEach(function(a){ h+=analyteRow(a); });
     h+='</div>';
   }
@@ -639,6 +787,8 @@ function renderDash(root){
   root.innerHTML=h;
   var dj=document.getElementById("docjump");
   if(dj) dj.onclick=function(){ TAB="doc"; render(); window.scrollTo(0,0); };
+  var cb=document.getElementById("critbar");
+  if(cb) cb.onclick=function(){ openStatusList("crit"); };
 }
 
 function renderTrends(root){
@@ -648,8 +798,8 @@ function renderTrends(root){
   var list=STATE.analytes.filter(function(a){ return (TRENDCAT==="All"||a.cat===TRENDCAT) && series(a.id).length>=1; });
   if(!list.length) h+='<div class="empty">No data in this category yet.</div>';
   list.forEach(function(a){
-    var pts=series(a.id); var cur=pts[pts.length-1]; var f=flag(a,cur.v);
-    h+='<div class="card"><h2>'+esc(a.name)+' <span class="chip '+f+'" style="float:right">'+flagLabel(f)+'</span></h2>'+
+    var pts=series(a.id); var cur=pts[pts.length-1]; var sv=sevOf(a,cur.v);
+    h+='<div class="card"><h2>'+esc(a.name)+' <span class="chip '+sv.cls+'" style="float:right">'+sv.chip+'</span></h2>'+
        '<div class="note" style="margin:0 0 6px">Ref: '+esc(rangeText(a))+'</div>'+
        '<div class="chartbox">'+bigChartSVG(a)+'</div></div>';
   });
@@ -752,10 +902,10 @@ function listSheet(title, sub, analytes, back){
   SHEET_BACK=back||null;
   var rows=analytes.map(function(a){
     var pts=series(a.id); if(!pts.length) return "";
-    var cur=pts[pts.length-1], f=flag(a,cur.v);
+    var cur=pts[pts.length-1];
     return '<div class="row" data-open="'+a.id+'">'+
       '<div class="nm"><b>'+esc(a.name)+'</b><span>'+esc(rangeText(a))+'</span></div>'+
-      '<div class="val"><b>'+fmtNum(cur.v)+'</b><span class="chip '+f+'">'+flagLabel(f)+'</span></div>'+
+      '<div class="val"><b>'+fmtNum(cur.v)+'</b>'+sevChip(a,cur.v)+'</div>'+
       gaugeHTML(a,cur.v)+'</div>';
   }).join("");
   sheetOpen('<h3>'+esc(title)+'</h3><div class="rng">'+esc(sub)+'</div>'+
@@ -767,9 +917,17 @@ function openStatusList(st){
   var rs=sortedResults(); if(!rs.length) return;
   var latest=rs[rs.length-1];
   var list=STATE.analytes.filter(function(a){
-    var v=latest.values[a.id]; return v!=null && flag(a,v)===st;
+    var v=latest.values[a.id]; if(v==null) return false;
+    var L=sevOf(a,v).lvl;
+    if(st==="norm") return L===0;
+    if(st==="bord") return L===1;
+    if(st==="out")  return L>=2;
+    if(st==="crit") return L===4;
+    return flag(a,v)===st;   // legacy
   });
-  var t = st==="ok" ? "Within range" : st==="hi" ? "Above range" : "Below range";
+  var t = st==="norm" ? "Within range" : st==="bord" ? "Borderline \u2014 inside the range but near a limit"
+        : st==="crit" ? "Critical values" : st==="out" ? "Outside the reference range"
+        : st==="hi" ? "Above range" : "Below range";
   listSheet(t, list.length+" of your results on "+fmtDate(latest.date)+" — tap any test for its history", list,
             function(){ openStatusList(st); });
 }
@@ -778,10 +936,10 @@ function openReport(date){
   var r=STATE.results.filter(function(x){return x.date===date;})[0]; if(!r) return;
   var list=STATE.analytes.filter(function(a){ return r.values[a.id]!=null; });
   var rows=list.map(function(a){
-    var v=r.values[a.id], f=flag(a,v);
+    var v=r.values[a.id];
     return '<div class="row" data-open="'+a.id+'">'+
       '<div class="nm"><b>'+esc(a.name)+'</b><span>'+esc(rangeText(a))+'</span></div>'+
-      '<div class="val"><b>'+fmtNum(v)+'</b><span class="chip '+f+'">'+flagLabel(f)+'</span></div>'+
+      '<div class="val"><b>'+fmtNum(v)+'</b>'+sevChip(a,v)+'</div>'+
       gaugeHTML(a,v)+'</div>';
   }).join("");
   SHEET_BACK=function(){ openReport(date); };
@@ -793,8 +951,7 @@ function openModal(id){
   var a=byId[id]; if(!a) return;
   var pts=series(id);
   var rows=pts.slice().reverse().map(function(p){
-    var f=flag(a,p.v);
-    return '<tr><td>'+fmtDate(p.date)+'</td><td><b>'+fmtNum(p.v)+'</b> '+esc(a.unit)+'</td><td><span class="chip '+f+'">'+flagLabel(f)+'</span></td></tr>';
+    return '<tr><td>'+fmtDate(p.date)+'</td><td><b>'+fmtNum(p.v)+'</b> '+esc(a.unit)+'</td><td>'+sevChip(a,p.v)+'</td></tr>';
   }).join("");
   var about = a.desc ? '<div class="about"><p>'+esc(a.desc)+'</p>'+(a.hint?'<p class="hint">'+esc(a.hint)+'</p>':'')+'</div>' : '';
   var back = SHEET_BACK ? '<button class="btn ghost" id="m-back" style="margin-top:8px">&lsaquo; Back</button>' : '';
@@ -861,15 +1018,15 @@ function buildFlags(){
     var vtxt=fmtNum(cur.v)+" "+a.unit;
 
     if(f!=="ok"){
-      // how far out of range
-      var far=false;
-      if(f==="hi" && a.hi!=null) far = cur.v > a.hi*1.8;
-      if(f==="lo" && a.lo!=null) far = cur.v < a.lo*0.7;
+      var sv=sevOf(a,cur.v);
+      var far = sv.lvl>=3;
       // persistently abnormal?
       var streak=0;
       for(var i=pts.length-1;i>=0;i--){ if(flag(a,pts[i].v)!=="ok") streak++; else break; }
       var pri = (far||streak>=3) ? 1 : 2;
       var why = (f==="hi"?"Above":"Below")+" the reference range of "+rangeText(a)+".";
+      if(sv.crit) why += " This breaches a general adult critical threshold \u2014 confirm against the laboratory\u2019s own critical list.";
+      else if(sv.dev!=null) why += " Deviation is "+Math.round(sv.dev*100)+"% of the reference-range width ("+sv.chip.toLowerCase()+").";
       if(streak>=3) why += " Has been "+(f==="hi"?"high":"low")+" on "+streak+" consecutive tests.";
       if(age>180) why += " Last measured "+fmtDate(cur.date)+", over 6 months ago.";
       out.push({pri:pri, id:a.id, name:a.name, val:vtxt, date:cur.date, why:why,
@@ -973,15 +1130,16 @@ function buildPrint(){
 
   // latest values by category
   h+='<div class="pb"></div><h2>Latest Results &mdash; '+fmtDate(latest.date)+'</h2>';
+  h+='<div class="leg"><b>Status scale:</b> NORMAL (in range) \u00b7 BORDERLINE (in range, within 10% of a limit) \u00b7 HIGH/LOW (out by \u2264 50% of range width) \u00b7 MARKED (out by 50\u2013150%) \u00b7 CRITICAL (published adult alert threshold, or out by &gt; 150%). Critical thresholds are general adult values, not this laboratory\u2019s own list.</div>';
   var cats=[]; STATE.analytes.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
   cats.forEach(function(c){
     var rows='';
     STATE.analytes.filter(function(a){return a.cat===c;}).forEach(function(a){
       var pts=series(a.id); if(!pts.length) return;
-      var cur=pts[pts.length-1], f=flag(a,cur.v);
+      var cur=pts[pts.length-1], sv=sevOf(a,cur.v);
       var prev=pts.length>1?pts[pts.length-2]:null;
       rows+='<tr><td>'+esc(a.name)+'</td><td class="n">'+fmtNum(cur.v)+' '+esc(a.unit)+'</td>'+
-            '<td class="n"><span class="st '+f+'">'+flagLabel(f)+'</span></td>'+
+            '<td class="n"><span class="st '+sv.cls+'">'+sv.chip+'</span></td>'+
             '<td class="n">'+esc(rangeText(a))+'</td>'+
             '<td class="n">'+(prev?fmtNum(prev.v)+' ('+fmtDate(prev.date)+')':'&ndash;')+'</td>'+
             '<td class="n">'+(cur.date===latest.date?'':fmtDate(cur.date))+'</td></tr>';
