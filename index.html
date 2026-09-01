@@ -258,13 +258,22 @@ header .sub{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:6px;
 
 /* ---------- forms ---------- */
 select,input[type=date],input[type=number],input[type=text],input[type=email],input[type=password]{
-  width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:var(--r-sm);
+  width:100%;min-width:0;max-width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:var(--r-sm);
   background:var(--panel-2);color:var(--fg);font-size:15px;font-family:inherit;
   transition:border-color .15s, box-shadow .15s;
+}
+/* Safari sizes these from their content, not their box - stop them growing the column */
+input[type=date]{-webkit-appearance:none;appearance:none;text-align:left}
+select{-webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--fg-3) 50%),linear-gradient(135deg,var(--fg-3) 50%,transparent 50%);
+  background-position:calc(100% - 17px) 52%, calc(100% - 12px) 52%;
+  background-size:5px 5px, 5px 5px; background-repeat:no-repeat; padding-right:34px;
 }
 input:focus,select:focus{outline:none;border-color:var(--cy);box-shadow:0 0 0 3px var(--cy-glow)}
 label{font-size:12px;font-weight:700;color:var(--fg-2);display:block;margin:12px 0 5px;letter-spacing:.01em}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2>*{min-width:0}                     /* without this a wide control overflows its column */
+@media (max-width:359px){ .grid2{grid-template-columns:1fr} }
 
 .btn{
   display:block;width:100%;padding:14px;border:none;border-radius:14px;
@@ -378,10 +387,13 @@ label{font-size:12px;font-weight:700;color:var(--fg-2);display:block;margin:12px
 .disc{font-size:12px;color:var(--fg-3);background:var(--panel-2);border-radius:14px;padding:13px 15px;margin-top:16px;line-height:1.55}
 
 .datecard{display:flex;align-items:center;justify-content:space-between;padding:14px 2px;border-bottom:1px solid var(--line);gap:10px}
+.datecard>div:first-child{flex:1 1 auto;min-width:0}
+.datecard>div:last-child{flex:0 0 auto;display:flex;gap:6px;align-items:center}
 .datecard:last-child{border-bottom:none}
 .datecard b{font-size:15px;font-weight:700}
 .datecard span{font-size:12px;color:var(--fg-3);display:block;margin-top:2px}
-.mini-btn{padding:8px 13px;border-radius:10px;border:1px solid var(--line-2);background:none;color:var(--fg);font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;margin-left:6px}
+.mini-btn{padding:8px 13px;border-radius:10px;border:1px solid var(--line-2);background:none;color:var(--fg);font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;flex:none}
+@media (max-width:380px){ .mini-btn{padding:8px 10px;font-size:12px} }
 .mini-btn.del{border-color:var(--hi);color:var(--hi)}
 
 .pick .cat{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
