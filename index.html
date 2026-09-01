@@ -690,9 +690,10 @@ function flagLabel(f){ return f==="hi"?"HIGH":f==="lo"?"LOW":"NORMAL"; }
    Level 0 NORMAL      inside the range, clear of both limits
    Level 1 BORDERLINE  inside the range but within 10% of range-width of a limit
    Level 2 mild        outside by up to 50% of range-width
-   Level 3 MARKED      outside by 50-150% of range-width
-   Level 4 CRITICAL    a published adult critical ("panic") value is breached,
-                       or outside by more than 150% of range-width
+   Level 3 MARKED      outside by more than 50% of range-width, however far
+   Level 4 CRITICAL    a published adult critical ("panic") value is breached.
+                       Distance alone never reaches this - "critical" here means
+                       seek advice promptly, which is a clinical claim, not arithmetic
 
    CRITICAL VALUES BELOW ARE CONVENTIONAL ADULT ALERT THRESHOLDS, NOT LAB-SPECIFIC.
    Every laboratory publishes its own critical-value list and they differ. Confirm
@@ -809,8 +810,8 @@ function sevOf(a,v){
   var span=(lo!=null&&hi!=null&&hi>lo)?(hi-lo):null;
   function unit(b){ return span!=null?span:(Math.abs(b)||1); }
   var d;
-  if(hi!=null && v>hi){ d=(v-hi)/unit(hi); return mk(d>SEV_MARKED?4:d>SEV_MILD?3:2,"hi",d,false); }
-  if(lo!=null && v<lo){ d=(lo-v)/unit(lo); return mk(d>SEV_MARKED?4:d>SEV_MILD?3:2,"lo",d,false); }
+  if(hi!=null && v>hi){ d=(v-hi)/unit(hi); return mk(d>SEV_MILD?3:2,"hi",d,false); }
+  if(lo!=null && v<lo){ d=(lo-v)/unit(lo); return mk(d>SEV_MILD?3:2,"lo",d,false); }
   if(hi!=null && (hi-v)/unit(hi)<=SEV_BORDER) return mk(1,"hi",0,false);
   if(lo!=null && (v-lo)/unit(lo)<=SEV_BORDER) return mk(1,"lo",0,false);
   return mk(0,null,0,false);
@@ -858,38 +859,39 @@ function zonesOf(a){
   function U(b){ return span!=null?span:(Math.abs(b)||1); }
   var uL = lo!=null?U(lo):null, uH = hi!=null?U(hi):null;
   var uAny = uL!=null?uL:uH;
-  // Critical boundaries. An analyte can carry a panic value on a side that has NO
-  // reference bound (systolic BP has no lower reference but <90 is critical) - sevOf()
-  // honours that, so the bar has to draw it or the bar and the chip would disagree.
-  var critLo = lo!=null ? Math.min(lo, Math.max(c.lo!=null?c.lo:-1e15, lo-SEV_MARKED*uL))
-                        : (c.lo!=null ? c.lo : null);
-  var critHi = hi!=null ? Math.max(hi, Math.min(c.hi!=null?c.hi: 1e15, hi+SEV_MARKED*uH))
-                        : (c.hi!=null ? c.hi : null);
-  var st = critLo!=null ? critLo-(lo!=null?0.30*uL:0.15*uAny) : (hi-0.85*uH);
-  var en = critHi!=null ? critHi+(hi!=null?0.30*uH:0.15*uAny) : (lo+0.85*uL);
-  st = Math.max(0, st);                     // these are all non-negative quantities
+  // A critical zone exists only where a panic value does. Everything beyond the
+  // mild band is MARKED until that threshold is reached.
+  var critLo = c.lo!=null ? (lo!=null?Math.min(lo,c.lo):c.lo) : null;
+  var critHi = c.hi!=null ? (hi!=null?Math.max(hi,c.hi):c.hi) : null;
+  var markLo = lo!=null ? lo-SEV_MARKED*uL : null;
+  var markHi = hi!=null ? hi+SEV_MARKED*uH : null;
+  var loEnd = (critLo!=null&&markLo!=null) ? Math.min(critLo,markLo) : (critLo!=null?critLo:markLo);
+  var hiEnd = (critHi!=null&&markHi!=null) ? Math.max(critHi,markHi) : (critHi!=null?critHi:markHi);
+  var st = (loEnd!=null ? loEnd : hi-0.85*uH) - (lo!=null?0.30*uL:0.15*uAny);
+  var en = (hiEnd!=null ? hiEnd : lo+0.85*uL) + (hi!=null?0.30*uH:0.15*uAny);
+  st = Math.max(0, st);
   if(!(en>st)) return null;
   var segs=[];
   function add(x,y,cls){ x=Math.max(st,x); y=Math.min(en,y); if(y-x>1e-9) segs.push({a:x,b:y,cls:cls}); }
   if(lo!=null){
-    // a panic value can sit INSIDE the proportional band; bands must never overlap,
-    // and sevOf() tests the panic value first, so critical wins the boundary
-    var mildLo = Math.max(critLo, lo-SEV_MILD*uL);
-    add(st, critLo, "s4");
-    add(critLo, mildLo, "s3");
+    var mildLo = lo-SEV_MILD*uL;
+    if(critLo!=null) mildLo = Math.max(mildLo, critLo);   // bands must never overlap
+    if(critLo!=null) add(st, critLo, "s4");
+    add(critLo!=null?critLo:st, mildLo, "s3");
     add(mildLo, lo, "s2");
     add(lo, lo+SEV_BORDER*uL, "s1");
   } else if(critLo!=null){
-    add(st, critLo, "s4");                  // panic value only - no graded low band exists
+    add(st, critLo, "s4");
   }
   add(lo!=null ? lo+SEV_BORDER*uL : (critLo!=null?critLo:st),
       hi!=null ? hi-SEV_BORDER*uH : (critHi!=null?critHi:en), "s0");
   if(hi!=null){
-    var mildHi = Math.min(critHi, hi+SEV_MILD*uH);
+    var mildHi = hi+SEV_MILD*uH;
+    if(critHi!=null) mildHi = Math.min(mildHi, critHi);
     add(hi-SEV_BORDER*uH, hi, "s1");
     add(hi, mildHi, "s2");
-    add(mildHi, critHi, "s3");
-    add(critHi, en, "s4");
+    add(mildHi, critHi!=null?critHi:en, "s3");
+    if(critHi!=null) add(critHi, en, "s4");
   } else if(critHi!=null){
     add(critHi, en, "s4");
   }
