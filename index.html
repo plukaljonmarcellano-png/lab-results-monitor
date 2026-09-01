@@ -473,7 +473,7 @@ footer{padding:18px;text-align:center;font-size:11.5px;color:var(--fg-3);line-he
   <button data-tab="doc"><span class="ic">&#10010;</span>Doctor</button>
   <button data-tab="add"><span class="ic">&#65291;</span>Add</button>
   <button data-tab="meds"><span class="ic">&#8478;</span>Meds</button>
-  <button data-tab="data"><span class="ic">&#8801;</span>Data</button>
+  <button data-tab="data"><span class="ic">&#9881;</span>Settings</button>
 </div>
 
 <div id="printview"></div>
@@ -487,8 +487,20 @@ var SUPABASE_KEY = "sb_publishable_ZmHevYIdUQyhJVjDQQ8aLw_dllQ_3Xe";
 
 var DEFAULT_ANALYTES = [{"id":"wt","name":"Weight","cat":"Vitals","unit":"kg","lo":null,"hi":null,"desc":"Your body weight. Weight change is often the main driver behind improvements in liver fat, blood sugar and triglycerides.","hint":"Log it any day \u2014 no lab visit needed. Weigh at the same time of day for consistency."},{"id":"sys","name":"Blood Pressure (systolic)","cat":"Vitals","unit":"mmHg","lo":null,"hi":130,"lowerBetter":true,"desc":"The upper blood pressure number \u2014 pressure while your heart beats. This is what blood-pressure medication targets.","hint":"Commonly targeted under 130. Sit quietly 5 minutes before measuring."},{"id":"dia","name":"Blood Pressure (diastolic)","cat":"Vitals","unit":"mmHg","lo":null,"hi":80,"lowerBetter":true,"desc":"The lower blood pressure number \u2014 pressure while your heart rests between beats.","hint":"Commonly targeted under 80."},{"id":"wbc","name":"WBC","cat":"Hematology (CBC)","unit":"\u00d710\u00b3/\u00b5L","lo":3.9,"hi":10.2,"desc":"White blood cells \u2014 your infection-fighting cells.","hint":"Rises with infection or inflammation."},{"id":"rbc","name":"RBC","cat":"Hematology (CBC)","unit":"\u00d710\u2076/\u00b5L","lo":4.3,"hi":5.75,"desc":"Red blood cells \u2014 they carry oxygen around your body.","hint":"Low can mean anemia."},{"id":"hct","name":"Hematocrit (HCT)","cat":"Hematology (CBC)","unit":"%","lo":39.5,"hi":50.5,"desc":"The percentage of your blood made up of red cells.","hint":"Low suggests anemia."},{"id":"hgb","name":"Hemoglobin (HGB)","cat":"Hematology (CBC)","unit":"g/dL","lo":13.5,"hi":17.2,"desc":"Hemoglobin \u2014 the protein in red cells that actually holds the oxygen.","hint":"Low means anemia; this is the key anemia number."},{"id":"mcv","name":"MCV","cat":"Hematology (CBC)","unit":"fL","lo":80,"hi":99,"desc":"Average size of your red blood cells.","hint":"Helps identify what type of anemia, if any."},{"id":"mch","name":"MCH","cat":"Hematology (CBC)","unit":"pg","lo":27,"hi":33.5,"desc":"Average amount of hemoglobin inside each red cell.","hint":"Read alongside MCV."},{"id":"mchc","name":"MCHC","cat":"Hematology (CBC)","unit":"g/dL","lo":31.5,"hi":36,"desc":"How concentrated the hemoglobin is inside your red cells.","hint":"Read alongside MCV and MCH."},{"id":"rdw","name":"RDW","cat":"Hematology (CBC)","unit":"%","lo":11.8,"hi":14.5,"desc":"How much your red cells vary in size.","hint":"High can be an early hint of anemia."},{"id":"plt","name":"Platelets","cat":"Hematology (CBC)","unit":"\u00d710\u00b3/\u00b5L","lo":150,"hi":450,"desc":"Platelets \u2014 the cells that make your blood clot.","hint":"Too low risks bleeding; too high risks clotting."},{"id":"mpv","name":"MPV","cat":"Hematology (CBC)","unit":"fL","lo":9.2,"hi":12.7,"desc":"Average size of your platelets.","hint":"Supporting detail for the platelet count."},{"id":"neut","name":"Neutrophils (abs)","cat":"Differential Count","unit":"\u00d710\u00b3/\u00b5L","lo":1.5,"hi":7.7,"desc":"Neutrophils \u2014 the white cells that fight bacterial infection.","hint":"Rise sharply with bacterial infection."},{"id":"lymph","name":"Lymphocytes (abs)","cat":"Differential Count","unit":"\u00d710\u00b3/\u00b5L","lo":1.1,"hi":4.5,"desc":"Lymphocytes \u2014 the white cells that fight viruses.","hint":"Rise with viral infection."},{"id":"mono","name":"Monocytes (abs)","cat":"Differential Count","unit":"\u00d710\u00b3/\u00b5L","lo":0.1,"hi":0.9,"desc":"Monocytes \u2014 white cells that clean up damaged tissue.","hint":"Mildly high is common and often not significant."},{"id":"eos","name":"Eosinophils (abs)","cat":"Differential Count","unit":"\u00d710\u00b3/\u00b5L","lo":0.02,"hi":0.5,"desc":"Eosinophils \u2014 white cells linked to allergy and parasites.","hint":"High suggests allergy or parasitic infection."},{"id":"baso","name":"Basophils (abs)","cat":"Differential Count","unit":"\u00d710\u00b3/\u00b5L","lo":0,"hi":0.2,"desc":"Basophils \u2014 the rarest white cells, involved in allergic reactions.","hint":"Rarely significant on its own."},{"id":"tc","name":"Total Cholesterol","cat":"Lipid Profile","unit":"mg/dL","lo":null,"hi":200,"lowerBetter":true,"desc":"Total cholesterol \u2014 all the cholesterol in your blood added together.","hint":"Lower is better."},{"id":"tg","name":"Triglycerides","cat":"Lipid Profile","unit":"mg/dL","lo":null,"hi":150,"lowerBetter":true,"desc":"Triglycerides \u2014 fat circulating in your blood, strongly affected by diet, alcohol and blood sugar.","hint":"Lower is better."},{"id":"hdl","name":"HDL Cholesterol","cat":"Lipid Profile","unit":"mg/dL","lo":60,"hi":null,"higherBetter":true,"desc":"HDL \u2014 the 'good' cholesterol that clears fat out of your arteries.","hint":"Higher is better."},{"id":"ldl","name":"LDL Cholesterol","cat":"Lipid Profile","unit":"mg/dL","lo":null,"hi":100,"lowerBetter":true,"desc":"LDL \u2014 the 'bad' cholesterol that builds up in artery walls.","hint":"Lower is better."},{"id":"alt","name":"SGPT (ALT)","cat":"Liver","unit":"U/L","lo":0,"hi":55,"lowerBetter":true,"desc":"ALT \u2014 an enzyme inside liver cells. It leaks into the blood when liver cells are irritated or damaged.","hint":"Lower is better; this is a main liver marker."},{"id":"ast","name":"SGOT (AST)","cat":"Liver","unit":"U/L","lo":0,"hi":40,"lowerBetter":true,"desc":"AST \u2014 another liver-cell enzyme, also found in muscle.","hint":"Lower is better; read together with ALT."},{"id":"alp","name":"Alkaline Phosphatase","cat":"Liver","unit":"U/L","lo":40,"hi":129,"desc":"Alkaline phosphatase \u2014 an enzyme from the liver's bile ducts and from bone.","hint":"High can point to bile-duct or bone issues."},{"id":"ggt","name":"GGT","cat":"Liver","unit":"U/L","lo":0,"hi":55,"lowerBetter":true,"desc":"GGT \u2014 a liver enzyme that is especially sensitive to alcohol and bile-duct problems.","hint":"Lower is better."},{"id":"crea","name":"Creatinine","cat":"Renal","unit":"mg/dL","lo":0.6,"hi":1.2,"desc":"Creatinine \u2014 muscle waste that healthy kidneys filter out.","hint":"High suggests the kidneys aren't filtering well."},{"id":"gfr","name":"GFR (est.)","cat":"Renal","unit":"mL/min","lo":60,"hi":null,"higherBetter":true,"desc":"GFR \u2014 an estimate of how much blood your kidneys filter per minute. The overall kidney score.","hint":"Higher is better; above 60 is normal."},{"id":"ua","name":"Uric Acid","cat":"Renal","unit":"mg/dL","lo":3.7,"hi":7.7,"desc":"Uric acid \u2014 waste from breaking down purines in food.","hint":"High can cause gout."},{"id":"crp","name":"CRP","cat":"Inflammation & Other","unit":"mg/dL","lo":0,"hi":0.5,"lowerBetter":true,"desc":"C-reactive protein \u2014 a general marker of inflammation anywhere in the body.","hint":"Lower is better."},{"id":"cas","name":"Calcium (Serum)","cat":"Inflammation & Other","unit":"mg/dL","lo":8.6,"hi":10,"desc":"Total calcium in your blood \u2014 important for bones, nerves, muscles and heart rhythm.","hint":"Tracked separately from Corrected Calcium, which is adjusted for protein levels."},{"id":"ca","name":"Corrected Calcium","cat":"Inflammation & Other","unit":"mg/dL","lo":8.5,"hi":10.5,"desc":"Corrected calcium \u2014 calcium in your blood, adjusted for protein levels.","hint":"Matters for bones, nerves and heart rhythm."},{"id":"ferr","name":"Ferritin","cat":"Inflammation & Other","unit":"ng/mL","lo":21.8,"hi":274.6,"desc":"Ferritin \u2014 your stored iron. It also rises with inflammation or liver irritation, so a high value isn't always about iron.","hint":"High needs a cause identified."},{"id":"tsh","name":"TSH","cat":"Hormones & Vitamins","unit":"\u00b5IU/mL","lo":0.3,"hi":4.2,"desc":"TSH \u2014 the hormone that tells your thyroid how hard to work. The main thyroid screening test.","hint":"High suggests underactive thyroid, low suggests overactive."},{"id":"b12","name":"Vitamin B12","cat":"Hormones & Vitamins","unit":"pg/mL","lo":187,"hi":883,"desc":"Vitamin B12 \u2014 needed for nerves and for making red blood cells.","hint":"Low causes fatigue and nerve symptoms."},{"id":"vitd","name":"Vitamin D (25-OH)","cat":"Hormones & Vitamins","unit":"ng/mL","lo":30,"hi":100,"desc":"Vitamin D \u2014 needed for bone health and immune function.","hint":"Low is very common; below 30 is deficient."},{"id":"bun","name":"Blood Urea Nitrogen (BUN)","cat":"Renal","unit":"mg/dL","lo":8.9,"hi":20.6,"desc":"Blood urea nitrogen \u2014 protein waste the kidneys clear.","hint":"Read together with creatinine."},{"id":"na","name":"Sodium (Na)","cat":"Electrolytes","unit":"mmol/L","lo":136,"hi":145,"desc":"Sodium \u2014 a salt that controls fluid balance in your body.","hint":"Kept in a tight range by the kidneys."},{"id":"k","name":"Potassium (K)","cat":"Electrolytes","unit":"mmol/L","lo":3.5,"hi":5.1,"desc":"Potassium \u2014 a salt essential for heart rhythm and muscle function.","hint":"Both high and low are dangerous for the heart."},{"id":"cl","name":"Chloride (Cl)","cat":"Electrolytes","unit":"mmol/L","lo":98,"hi":107,"desc":"Chloride \u2014 a salt that works alongside sodium.","hint":"Read with the other electrolytes."},{"id":"trop","name":"Troponin HS","cat":"Cardiac","unit":"pg/mL","lo":null,"hi":34.2,"lowerBetter":true,"desc":"Troponin \u2014 a protein released when heart muscle is damaged. Used to rule out a heart attack.","hint":"Should be low; a normal result is reassuring."},{"id":"ddimer","name":"D-Dimer (Quant.)","cat":"Cardiac","unit":"\u00b5g/mL","lo":null,"hi":0.5,"lowerBetter":true,"desc":"D-dimer \u2014 a fragment left behind when a blood clot dissolves. Used to rule out clots in the legs or lungs.","hint":"A normal result largely rules out a clot."},{"id":"hba1c","name":"HbA1c","cat":"Glycemic Control","unit":"%","lo":null,"hi":5.7,"lowerBetter":true,"desc":"HbA1c \u2014 your average blood sugar over roughly the past 3 months, in one number.","hint":"Under 5.7 is normal, 5.7\u20136.4 is prediabetes, 6.5+ is diabetes."},{"id":"eag","name":"Estimated Avg. Glucose (eAG)","cat":"Glycemic Control","unit":"mg/dL","lo":null,"hi":117,"lowerBetter":true,"desc":"Estimated average glucose \u2014 the same HbA1c result expressed as a daily blood-sugar number.","hint":"Lower is better."},{"id":"homair","name":"HOMA-IR","cat":"Glycemic Control","unit":"index","lo":null,"hi":1.9,"lowerBetter":true,"desc":"HOMA-IR \u2014 how hard your body has to work to keep blood sugar under control (insulin resistance).","hint":"Under 1.0 is insulin-sensitive; above 2.9 is significant resistance."},{"id":"acr","name":"Albumin/Creatinine Ratio","cat":"Renal","unit":"mg/g","lo":null,"hi":30,"lowerBetter":true,"desc":"Albumin/creatinine ratio \u2014 measures protein leaking into your urine, which shouldn't normally happen.","hint":"Lower is better; an early kidney-damage warning."}];
 
-var STATE = { analytes: DEFAULT_ANALYTES, results: [], meds: [] };
+var STATE = { analytes: DEFAULT_ANALYTES, analytesRaw: DEFAULT_ANALYTES, results: [], meds: [], profile: {} };
 var byId = {};
+/* Reference limits that depend on who you are. Applied to a working copy so the
+   canonical set (analytesRaw) is what gets saved - changing your profile must never
+   write a sex-specific limit back to the database as if it were the lab's own. */
+function applyProfileRanges(){
+  var sex=(STATE.profile||{}).sex;
+  STATE.analytes = (STATE.analytesRaw||DEFAULT_ANALYTES).map(function(a){
+    if(a.id==="trop" && sex){ var c=JSON.parse(JSON.stringify(a)); c.hi=(sex==="F")?15.6:34.2; return c; }
+    return a;
+  });
+  byId = {}; STATE.analytes.forEach(function(a){ byId[a.id]=a; });
+}
+
 var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var BOOTED = false;
 
@@ -509,7 +521,7 @@ var SB = {
     return Promise.all([
       sb.from("lab_reports").select("taken_on,lab,values").order("taken_on"),
       sb.from("medications").select("name,started_on,until_on,note").order("started_on"),
-      sb.from("app_settings").select("analytes").maybeSingle()
+      sb.from("app_settings").select("analytes,profile").maybeSingle()
     ]).then(function(r){
       if(r[0].error) throw r[0].error;
       if(r[1].error) throw r[1].error;
@@ -520,9 +532,10 @@ var SB = {
         return { name:x.name, start:x.started_on, until:x.until_on||"", note:x.note||"" };
       });
       if(r[2] && r[2].data && r[2].data.analytes && r[2].data.analytes.length){
-        STATE.analytes = r[2].data.analytes;
+        STATE.analytesRaw = r[2].data.analytes;
       }
-      byId = {}; STATE.analytes.forEach(function(a){ byId[a.id]=a; });
+      STATE.profile = (r[2] && r[2].data && r[2].data.profile) || {};
+      applyProfileRanges();
       SB.pendingDeletes = []; SB.medsDirty = false;
       busy(false);
       note(STATE.results.length + " reports \u00b7 synced");
@@ -570,7 +583,8 @@ var SB = {
       })
       .then(function(res){
         if(res && res.error) throw res.error;
-        return sb.from("app_settings").upsert({ analytes:STATE.analytes }, { onConflict:"user_id" });
+        return sb.from("app_settings").upsert(
+          { analytes:STATE.analytesRaw, profile:STATE.profile||{} }, { onConflict:"user_id" });
       })
       .then(function(){
         self.saving = false; busy(false);
@@ -723,7 +737,16 @@ var STAGED = {
          bands:[{to:10,lvl:4,dir:"lo"},{to:20,lvl:3,dir:"lo"},{to:30,lvl:2,dir:"lo"},
                 {to:100,lvl:0},{to:150,lvl:2,dir:"hi"},{to:null,lvl:4,dir:"hi"}]}
 };
-function stagesFor(a){ return STAGED[a.id]||null; }
+function stagesFor(a){
+  var st = STAGED[a.id];
+  if(!st) return null;
+  // HDL risk thresholds differ by sex (NCEP ATP III): under 40 in men, under 50 in women
+  if(a.id==="hdl" && (STATE.profile||{}).sex==="F"){
+    return { src:"Your lab reports only \u201cover 60\u201d. Stages here follow NCEP ATP III, where under 50 in women is itself a cardiac risk factor and 60+ is protective.",
+             bands:[{to:50,lvl:3,dir:"lo"},{to:60,lvl:2,dir:"lo"},{to:null,lvl:0}] };
+  }
+  return st;
+}
 
 function sevOf(a,v){
   if(v==null) return {lvl:-1,dir:null,cls:"na",chip:"\u2014",label:"No data",dev:null,crit:false};
@@ -1100,7 +1123,8 @@ function renderAdd(root, editDate){
   var cats=[]; STATE.analytes.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
   var h='<div class="card"><h2>'+(editing?"Edit Result — "+fmtDate(editDate):"Add a result")+'</h2>'+
     '<div class="grid2 dategrid"><div><label>Report date</label><input type="date" id="f-date" value="'+(editing?editing.date:"")+'" '+(editing?"disabled":"")+'></div>'+
-    '<div><label>Lab / facility</label><input type="text" id="f-lab" placeholder="Optional" value="'+(editing&&editing.lab?esc(editing.lab):"")+'"></div></div>'+
+    '<div><label>Lab / facility</label><input type="text" id="f-lab" placeholder="Optional" value="'+
+       (editing ? (editing.lab?esc(editing.lab):"") : esc((STATE.profile||{}).lab||""))+'"></div></div>'+
     '<div class="note">Enter only the tests on this report — leave the rest blank. Check that the units match the label on each field; some labs report CRP in mg/L, which is 10&times; the mg/dL value used here.</div></div>';
   cats.forEach(function(c){
     h+='<div class="card"><h2>'+esc(c)+'</h2><div class="grid2">';
@@ -1149,7 +1173,25 @@ function renderAdd(root, editDate){
 function renderData(root){
   var rs=sortedResults().slice().reverse();
   var th=currentTheme();
-  var h='<div class="card"><h2>Appearance</h2>'+
+  var pf=STATE.profile||{};
+  var h='<div class="card"><h2>Profile</h2>'+
+     '<div class="note" style="margin:-2px 0 10px">Used to label your exported report, and to grade the results '+
+     'whose reference limits depend on sex.</div>'+
+     '<label>Full name</label><input type="text" id="pf-name" placeholder="Your name" value="'+esc(pf.name||"")+'">'+
+     '<div class="grid2"><div><label>Date of birth</label><input type="date" id="pf-dob" value="'+esc(pf.dob||"")+'"></div>'+
+     '<div><label>Sex</label><select id="pf-sex">'+
+       '<option value=""'+(!pf.sex?" selected":"")+'>Not set</option>'+
+       '<option value="M"'+(pf.sex==="M"?" selected":"")+'>Male</option>'+
+       '<option value="F"'+(pf.sex==="F"?" selected":"")+'>Female</option>'+
+     '</select></div></div>'+
+     '<label>Doctor</label><input type="text" id="pf-doc" placeholder="e.g. Dr. Bayan Waez" value="'+esc(pf.doctor||"")+'">'+
+     '<label>Usual lab or hospital</label><input type="text" id="pf-lab" placeholder="e.g. Al Salama Hospital" value="'+esc(pf.lab||"")+'">'+
+     '<button class="btn" id="pf-save" style="margin-top:12px">Save profile</button>'+
+     (pf.sex ? '<div class="note" style="margin:10px 0 0">Troponin is graded against the '+
+        (pf.sex==="F"?"female":"male")+' range, and HDL against the '+
+        (pf.sex==="F"?"under-50":"under-40")+' risk threshold.</div>' : '')+
+     '</div>';
+  h+='<div class="card"><h2>Appearance</h2>'+
      '<div class="seg" style="margin-bottom:2px">'+
        ['system','light','dark'].map(function(t){
          return '<button data-theme-set="'+t+'" class="'+(t===th?'on':'')+'">'+
@@ -1158,7 +1200,7 @@ function renderData(root){
      '</div>'+
      '<div class="note" style="margin:2px 0 0">System follows your phone or computer\u2019s own light/dark setting. '+
      'Also on the button at the top right of every screen. Saved on this device only.</div></div>';
-  h+='<div class="card"><h2>Saved reports ('+rs.length+')</h2>';
+  h+='<div class="card"><h2>Your reports ('+rs.length+')</h2>';
   if(!rs.length) h+='<div class="empty">Nothing saved yet.</div>';
   rs.forEach(function(r){
     var n=Object.keys(r.values).length;
@@ -1316,7 +1358,7 @@ function cycleTheme(){
   applyTheme(next);
   paintThemeBtn();
   themeToast("Appearance: "+THEME_NAME[next]);
-  if(TAB==="data") render();          // keep the Data tab's buttons in step
+  if(TAB==="data") render();          // keep the Settings tab's buttons in step
 }
 function applyTheme(t){
   var el=document.documentElement;
@@ -1456,7 +1498,14 @@ function renderDoc(root){
 function buildPrint(){
   var rs=sortedResults(); if(!rs.length) return "";
   var latest=rs[rs.length-1];
+  var pf=STATE.profile||{};
+  var who=[];
+  if(pf.name) who.push('<b>'+esc(pf.name)+'</b>');
+  if(pf.dob)  who.push('DOB '+fmtDate(pf.dob));
+  if(pf.sex)  who.push(pf.sex==="F"?"Female":"Male");
+  if(pf.doctor) who.push('Dr: '+esc(pf.doctor).replace(/^Dr\.?\s*/i,''));
   var h='<h1>Lab Results Summary</h1>'+
+    (who.length?'<div class="meta">'+who.join(' &middot; ')+'</div>':'')+
     '<div class="meta">Latest report '+fmtDate(latest.date)+(latest.lab?' &middot; '+esc(latest.lab):'')+
     ' &middot; '+rs.length+' reports from '+fmtDate(rs[0].date)+' to '+fmtDate(latest.date)+
     ' &middot; generated '+fmtDate(new Date().toISOString().slice(0,10))+'</div>';
@@ -1622,6 +1671,19 @@ function render(editDate){
   if(TAB==="doc") root.querySelectorAll(".flag[data-open]").forEach(function(r){ r.onclick=function(){
     SHEET_BACK=null; openModal(r.getAttribute("data-open")); }; });
   root.querySelectorAll("[data-kpi]").forEach(function(r){ r.onclick=function(){ openStatusList(r.getAttribute("data-kpi")); }; });
+  var pfs=document.getElementById("pf-save");
+  if(pfs) pfs.onclick=function(){
+    STATE.profile = {
+      name:   document.getElementById("pf-name").value.trim(),
+      dob:    document.getElementById("pf-dob").value,
+      sex:    document.getElementById("pf-sex").value,
+      doctor: document.getElementById("pf-doc").value.trim(),
+      lab:    document.getElementById("pf-lab").value.trim()
+    };
+    applyProfileRanges();     // sex may have changed which limits apply
+    persist(); render();
+    themeToast("Profile saved");
+  };
   root.querySelectorAll("[data-theme-set]").forEach(function(b){ b.onclick=function(){
     var t=b.getAttribute("data-theme-set");
     applyTheme(t); themeToast("Appearance: "+THEME_NAME[t]); render(); }; });
