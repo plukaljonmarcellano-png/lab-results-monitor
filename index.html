@@ -483,9 +483,14 @@ var SB = {
     if(this.saving){ this.again = true; return; }
     this.saving = true; busy(true); note("Saving\u2026");
     var self = this;
-    var reports = STATE.results.map(function(r){
-      return { taken_on:r.date, lab:r.lab||null, values:r.values };
+    var byDate = {}, order = [];
+    STATE.results.forEach(function(r){
+      if(!byDate[r.date]){ byDate[r.date] = { taken_on:r.date, lab:r.lab||null, values:{} }; order.push(r.date); }
+      var t = byDate[r.date];
+      Object.keys(r.values||{}).forEach(function(k){ t.values[k] = r.values[k]; });
+      if(r.lab) t.lab = r.lab;
     });
+    var reports = order.map(function(d){ return byDate[d]; });
     var drop = self.pendingDeletes.slice();
 
     if(!reports.length && !drop.length){
@@ -1041,6 +1046,23 @@ function renderAdd(root, editDate){
     });
     if(!Object.keys(vals).length){ alert("Enter at least one value."); return; }
     var lab=document.getElementById("f-lab").value.trim();
+    var prev = STATE.results.filter(function(r){ return r.date===date; })[0];
+    if(prev && !editing){
+      var typed = Object.keys(vals);
+      var kept  = Object.keys(prev.values).filter(function(k){ return typed.indexOf(k)<0; });
+      if(kept.length){
+        var names = kept.map(function(k){ return byId[k] ? byId[k].name : k; });
+        if(!confirm("A report already exists for "+fmtDate(date)+", holding "+kept.length+
+            " other result"+(kept.length===1?"":"s")+":\n\n"+names.join(", ")+
+            "\n\nOK  \u2014 add your "+typed.length+" value"+(typed.length===1?"":"s")+
+            " to that report, keeping these.\nCancel \u2014 go back without saving.")) return;
+        var merged={};
+        Object.keys(prev.values).forEach(function(k){ merged[k]=prev.values[k]; });
+        typed.forEach(function(k){ merged[k]=vals[k]; });
+        vals = merged;
+      }
+      if(!lab) lab = prev.lab||"";
+    }
     STATE.results = STATE.results.filter(function(r){return r.date!==date;});
     STATE.results.push({date:date, lab:lab, values:vals});
     persist(); TAB="dash"; render();
