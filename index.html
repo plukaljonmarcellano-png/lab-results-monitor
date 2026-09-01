@@ -326,25 +326,25 @@ label{font-size:12px;font-weight:700;color:var(--fg-2);display:block;margin:12px
 .banner{background:var(--lo-bg);color:var(--lo);border-radius:var(--r-sm);padding:10px 13px;font-size:12.5px;font-weight:700;margin-bottom:12px;display:none}
 .banner.show{display:block}
 
-.seg{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;margin-bottom:8px;
+.chiprow{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;margin-bottom:8px;
   -webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain}
-.seg::-webkit-scrollbar{display:none}
+.chiprow::-webkit-scrollbar{display:none}
 @media (pointer:fine){                    /* a mouse cannot swipe - give it a bar */
-  .seg{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
-  .seg::-webkit-scrollbar{display:block;height:8px}
-  .seg::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px}
-  .seg::-webkit-scrollbar-thumb:hover{background:var(--fg-3)}
-  .seg::-webkit-scrollbar-track{background:transparent}
+  .chiprow{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+  .chiprow::-webkit-scrollbar{display:block;height:8px}
+  .chiprow::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px}
+  .chiprow::-webkit-scrollbar-thumb:hover{background:var(--fg-3)}
+  .chiprow::-webkit-scrollbar-track{background:transparent}
 }
 @media (min-width:560px){                 /* enough room to show them all at once */
-  .seg{flex-wrap:wrap;overflow-x:visible;padding-bottom:0}
-  .seg::-webkit-scrollbar{display:none}
+  .chiprow{flex-wrap:wrap;overflow-x:visible;padding-bottom:0}
+  .chiprow::-webkit-scrollbar{display:none}
 }
-.seg button{
+.chiprow button{
   flex:none;padding:8px 15px;border-radius:99px;border:1px solid var(--line-2);
   background:var(--panel);color:var(--fg-2);font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;
 }
-.seg button.on{background:var(--cy);border-color:var(--cy);color:#04201E}
+.chiprow button.on{background:var(--cy);border-color:var(--cy);color:#04201E}
 
 .dategrid label{margin-top:0}
 .empty{text-align:center;color:var(--fg-3);padding:30px 0;font-size:14px}
@@ -478,6 +478,50 @@ footer{padding:18px;text-align:center;font-size:11.5px;color:var(--fg-3);line-he
 #busy{position:fixed;top:0;left:0;right:0;height:2px;background:var(--cy);box-shadow:0 0 12px var(--cy);transform:scaleX(0);transform-origin:left;transition:transform .35s;z-index:300}
 #busy.on{transform:scaleX(.85)}
 @media print{ #gate,#busy{display:none !important} }
+
+/* ---------- chart readout ---------- */
+.charttip{
+  position:fixed;z-index:150;pointer-events:none;opacity:0;transform:translateY(3px);
+  transition:opacity .12s ease, transform .12s ease;
+  background:var(--panel);color:var(--fg);border:1px solid var(--line-2);border-radius:13px;
+  padding:9px 12px 10px;box-shadow:0 8px 28px rgba(2,8,9,.28);
+  font-size:12.5px;line-height:1.45;min-width:126px;max-width:230px;
+}
+.charttip.on{opacity:1;transform:none}
+.charttip .d{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--fg-3)}
+.charttip .v{font-size:20px;font-weight:800;letter-spacing:-.02em;margin:3px 0 5px;font-variant-numeric:tabular-nums}
+.charttip .v small{font-size:11.5px;font-weight:700;color:var(--fg-3);margin-left:3px;letter-spacing:0}
+.charttip .dl{font-size:11.5px;color:var(--fg-2);margin-top:6px;font-variant-numeric:tabular-nums}
+.charttip .lb{font-size:11px;color:var(--fg-3);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+svg[data-pts]{touch-action:pan-y}
+
+/* ---------- search ---------- */
+.srch{position:relative;margin:0 0 12px}
+.srch input[type=search]{
+  width:100%;min-width:0;padding:12px 40px 12px 38px;border:1px solid var(--line-2);
+  border-radius:99px;background:var(--panel);color:var(--fg);font-size:15px;font-family:inherit;
+  -webkit-appearance:none;appearance:none;
+}
+.srch input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.srch input:focus{outline:none;border-color:var(--cy);box-shadow:0 0 0 3px rgba(0,168,158,.16)}
+.srch .mag{
+  position:absolute;left:15px;top:50%;width:11px;height:11px;margin-top:-7px;
+  border:2px solid var(--fg-3);border-radius:50%;pointer-events:none;
+}
+.srch .mag:after{
+  content:"";position:absolute;right:-4px;bottom:-4px;width:6px;height:2px;
+  background:var(--fg-3);transform:rotate(45deg);border-radius:2px;
+}
+.srch .clr{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  width:30px;height:30px;border-radius:50%;border:none;background:var(--panel-2);
+  color:var(--fg-2);font-size:19px;line-height:1;cursor:pointer;font-family:inherit;
+}
+.srch .clr:hover{background:var(--line);color:var(--fg)}
+.alsohd{
+  font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--fg-3);margin:16px 0 2px;padding-top:11px;border-top:1px solid var(--line);
+}
 </style>
 </head>
 <body>
@@ -1023,7 +1067,17 @@ function bigChartSVG(a){
   var MEDTOP=14;
   PT += medRows*17;                    // read by Y() at call time, so this lands
 
-  var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;min-width:320px" xmlns="http://www.w3.org/2000/svg">';
+  /* Every plotted point, in viewBox coordinates, so hovering can name the one
+     under the cursor. The lab travels with it - "72.75 kg" means something
+     different from a hospital scale than from the one in the bathroom. */
+  var LABOF={};
+  STATE.results.forEach(function(r){ if(r.lab) LABOF[r.date]=r.lab; });
+  var HITS=pts.map(function(p,i){
+    return [ +X(i).toFixed(1), +Y(p.v).toFixed(1), p.date, p.v, LABOF[p.date]||"" ];
+  });
+
+  var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;min-width:320px" xmlns="http://www.w3.org/2000/svg"'+
+        ' data-chart="'+esc(a.id)+'" data-pts="'+esc(JSON.stringify(HITS))+'">';
   if(a.lo!=null || a.hi!=null){
     var bLo=a.lo!=null?a.lo:mn, bHi=a.hi!=null?a.hi:mx;
     s+='<rect x="'+PL+'" y="'+Y(bHi)+'" width="'+(W-PL-PR)+'" height="'+Math.max(0,(Y(bLo)-Y(bHi)))+'" fill="var(--cy)" opacity="0.07"/>';
@@ -1099,6 +1153,10 @@ function bigChartSVG(a){
     s+='<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+(H-PB)+'" y2="'+(H-PB+4)+'" stroke="var(--line)"/>';
   });
   if(pts.length>1) s+='<text x="'+((PL+W-PR)/2)+'" y="'+(H-2)+'" text-anchor="middle" font-size="9.5" fill="var(--fg-3)">spacing follows real time</text>';
+  s+='<g class="hov" style="display:none" pointer-events="none">'+
+       '<line x1="0" x2="0" y1="'+PT+'" y2="'+(H-PB)+'" stroke="var(--cy)" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>'+
+       '<circle cx="0" cy="0" r="7.5" fill="none" stroke="var(--cy)" stroke-width="2.5"/>'+
+     '</g>';
   s+='</svg>';
   return s;
 }
@@ -1133,8 +1191,33 @@ function renderDash(root){
   abn.sort(function(x,y){ return (y.lvl-x.lvl) || (y.dev-x.dev); });
   abn = abn.map(function(x){ return x.a; });
   document.getElementById("hdrSub").textContent=fmtDate(latest.date);
+
+  if(SEARCH.trim()){
+    var hits=searchHits(SEARCH);
+    var hs=searchBox("Search tests \u2014 name, category, or what it measures");
+    hs+='<div class="card"><h2>'+hits.length+' test'+(hits.length===1?'':'s')+' match</h2>';
+    if(!hits.length){
+      hs+='<div class="empty">Nothing matches \u201c'+esc(SEARCH)+'\u201d.<br>'+
+          'Try a shorter word, or a general one \u2014 liver, kidney, sugar, iron, thyroid.</div>';
+    } else {
+      hs+='<div class="note" style="margin:-4px 0 8px">Most recent value of each. Tap any row for its full history.</div>';
+      var weak=false;
+      hits.forEach(function(x){
+        if(x.sc===0 && !weak){                  // a passing mention, not a name match
+          weak=true;
+          hs+='<div class="alsohd">Also mentions \u201c'+esc(SEARCH.trim())+'\u201d</div>';
+        }
+        hs+=analyteRow(x.a, latest.date);
+      });
+    }
+    hs+='</div>';
+    root.innerHTML=hs;
+    return;
+  }
+
   var nflag=buildFlags().filter(function(x){return x.pri<3;}).length;
-  var h = nflag ? '<div class="card" id="docjump" style="cursor:pointer;border-left:4px solid var(--mag)"><h2 style="margin:0">'+nflag+' thing'+(nflag===1?'':'s')+' to ask your doctor →</h2></div>' : '';
+  var h = searchBox("Search tests \u2014 name, category, or what it measures");
+  h += nflag ? '<div class="card" id="docjump" style="cursor:pointer;border-left:4px solid var(--mag)"><h2 style="margin:0">'+nflag+' thing'+(nflag===1?'':'s')+' to ask your doctor →</h2></div>' : '';
   if(counts.crit){
     h+='<div class="critbar" id="critbar"><span class="dot"></span>'+counts.crit+' critical value'+(counts.crit===1?'':'s')+' \u2014 discuss with a doctor promptly<span class="go">\u203a</span></div>';
   }
@@ -1189,11 +1272,20 @@ function renderDash(root){
 }
 
 function renderTrends(root){
+  var q=SEARCH.trim();
   var cats=["All"]; STATE.analytes.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
-  var h='<div class="seg">'+cats.map(function(c){return '<button data-cat="'+esc(c)+'" class="'+(c===TRENDCAT?"on":"")+'">'+esc(c)+'</button>';}).join("")+'</div>';
+  var h=searchBox("Search tests \u2014 name, category, or what it measures");
+  // While searching, the category chips would fight the query. Hide them.
+  if(!q) h+='<div class="chiprow">'+cats.map(function(c){return '<button data-cat="'+esc(c)+'" class="'+(c===TRENDCAT?"on":"")+'">'+esc(c)+'</button>';}).join("")+'</div>';
   h+='<button class="btn" id="tr-pdf" style="margin:2px 0 12px">Export these trends</button>';
-  var list=STATE.analytes.filter(function(a){ return (TRENDCAT==="All"||a.cat===TRENDCAT) && series(a.id).length>=1; });
-  if(!list.length) h+='<div class="empty">No data in this category yet.</div>';
+  var list = q ? searchHits(q).map(function(x){ return x.a; })
+               : STATE.analytes.filter(function(a){
+                   return series(a.id).length && (TRENDCAT==="All"||a.cat===TRENDCAT); });
+  if(q) h+='<div class="note" style="margin:-6px 0 12px">'+list.length+' test'+(list.length===1?'':'s')+
+           ' match \u201c'+esc(q)+'\u201d</div>';
+  if(!list.length) h+='<div class="empty">'+(q
+      ? 'Nothing matches. Try a shorter word, or a general one \u2014 liver, kidney, sugar, iron, thyroid.'
+      : 'No data in this category yet.')+'</div>';
   list.forEach(function(a){
     var pts=series(a.id); var cur=pts[pts.length-1]; var sv=sevOf(a,cur.v);
     h+='<div class="card"><h2>'+esc(a.name)+' <span class="chip '+sv.cls+'" style="float:right">'+sv.chip+'</span></h2>'+
@@ -1203,7 +1295,7 @@ function renderTrends(root){
   });
   root.innerHTML=h;
   document.getElementById("tr-pdf").onclick=openExportPicker;
-  root.querySelectorAll("[data-cat]").forEach(function(b){ b.onclick=function(){ TRENDCAT=b.getAttribute("data-cat"); render(); }; });
+  root.querySelectorAll(".chiprow [data-cat]").forEach(function(b){ b.onclick=function(){ TRENDCAT=b.getAttribute("data-cat"); render(); }; });
 }
 
 function renderAdd(root, editDate){
@@ -1280,7 +1372,7 @@ function renderData(root){
         (pf.sex==="F"?"under-50":"under-40")+' risk threshold.</div>' : '')+
      '</div>';
   h+='<div class="card"><h2>Appearance</h2>'+
-     '<div class="seg" style="margin-bottom:2px">'+
+     '<div class="chiprow" style="margin-bottom:2px">'+
        ['system','light','dark'].map(function(t){
          return '<button data-theme-set="'+t+'" class="'+(t===th?'on':'')+'">'+
                 THEME_ICON[t]+'  '+THEME_NAME[t]+'</button>';
@@ -1294,7 +1386,7 @@ function renderData(root){
     return REPFILTER==="all" || reportKind(r)===REPFILTER;
   });
   h+='<div class="card"><h2>Your reports ('+shown.length+')</h2>'+
-     '<div class="seg" style="margin:-2px 0 4px">'+
+     '<div class="chiprow" style="margin:-2px 0 4px">'+
        [["all","All",rs.length],["lab","Lab reports",nLab],["vitals","Vitals",nVit]].map(function(o){
          return '<button data-repfilter="'+o[0]+'" class="'+(o[0]===REPFILTER?'on':'')+'">'+o[1]+' ('+o[2]+')</button>';
        }).join('')+
@@ -1481,6 +1573,89 @@ function reportKind(r){                       // "lab" if it holds anything a la
   return ks.some(function(k){ return !isSelfMeasured(k); }) ? "lab" : "vitals";
 }
 var MEDEDIT=null;                             // index of the medication being edited
+var SEARCH="";                                // transient: never persisted
+var ALIAS = {
+  sugar:"hba1c eag homair", diabetes:"hba1c eag homair", diabetic:"hba1c eag homair",
+  glucose:"hba1c eag", a1c:"hba1c", hba1c:"hba1c eag",
+  cholesterol:"tc tg hdl ldl", lipid:"tc tg hdl ldl", lipids:"tc tg hdl ldl",
+  triglyceride:"tg", liver:"alt ast alp ggt", sgpt:"alt", sgot:"ast",
+  kidney:"crea gfr ua bun acr", renal:"crea gfr ua bun acr", urine:"acr",
+  bp:"sys dia", pressure:"sys dia", hypertension:"sys dia", systolic:"sys", diastolic:"dia",
+  anemia:"hgb hct rbc mcv mch ferr", anaemia:"hgb hct rbc mcv mch ferr",
+  iron:"ferr hgb", haemoglobin:"hgb", hemoglobin:"hgb",
+  infection:"wbc neut lymph mono crp", inflammation:"crp ferr",
+  thyroid:"tsh", vitamin:"vitd b12", vitamins:"vitd b12",
+  heart:"trop ddimer sys dia", cardiac:"trop ddimer", troponin:"trop",
+  clot:"plt mpv ddimer", clotting:"plt mpv ddimer", platelet:"plt mpv",
+  weight:"wt bmi bf mm", fat:"bf tg", muscle:"mm", body:"wt bmi bf mm",
+  salt:"na k cl", electrolyte:"na k cl", electrolytes:"na k cl",
+  sodium:"na", potassium:"k", chloride:"cl",
+  gout:"ua", uric:"ua", calcium:"ca cas",
+  cbc:"wbc rbc hct hgb mcv mch mchc rdw plt mpv neut lymph mono eos baso",
+  white:"wbc neut lymph mono eos baso", red:"rbc hgb hct mcv mch mchc rdw",
+  differential:"neut lymph mono eos baso"
+};
+/* -1 no match, then weakest to strongest:
+     0  only the plain-English description mentions it
+     1  the category
+     2  a lay word that maps onto this test
+     3  the test's own name or code                                          */
+function scoreAnalyte(a, q){
+  var terms=String(q||"").toLowerCase().split(/\s+/).filter(Boolean);
+  if(!terms.length) return 3;
+  var name=(a.name+" "+a.id).toLowerCase();
+  var cat =(a.cat||"").toLowerCase();
+  var text=((a.desc||"")+" "+(a.hint||"")+" "+(a.unit||"")).toLowerCase();
+  var worst=3;
+  for(var i=0;i<terms.length;i++){
+    var t=terms[i], tier=-1;
+    if(name.indexOf(t)>=0) tier=3;
+    else {
+      for(var k in ALIAS){                      // prefix, so "chol" reaches "cholesterol"
+        if(k.indexOf(t)===0 && (" "+ALIAS[k]+" ").indexOf(" "+a.id+" ")>=0){ tier=2; break; }
+      }
+      if(tier<0 && cat.indexOf(t)>=0) tier=1;
+      else if(tier<0 && text.indexOf(t)>=0) tier=0;
+    }
+    if(tier<0) return -1;                       // every word has to land somewhere
+    if(tier<worst) worst=tier;
+  }
+  return worst;
+}
+function matchAnalyte(a, q){ return scoreAnalyte(a,q) >= 0; }
+/* Strong matches first, original order preserved inside each tier. */
+function searchHits(q){
+  var out=[];
+  STATE.analytes.forEach(function(a,i){
+    if(!series(a.id).length) return;
+    var sc=scoreAnalyte(a,q);
+    if(sc>=0) out.push({a:a, sc:sc, i:i});
+  });
+  out.sort(function(x,y){ return (y.sc-x.sc) || (x.i-y.i); });
+  return out;
+}
+function searchBox(ph){
+  return '<div class="srch"><span class="mag" aria-hidden="true"></span>'+
+    '<input type="search" id="q" placeholder="'+esc(ph)+'" value="'+esc(SEARCH)+'" '+
+      'autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">'+
+    (SEARCH ? '<button class="clr" id="q-clr" type="button" aria-label="Clear search">&times;</button>' : '')+
+  '</div>';
+}
+/* render() rebuilds the whole tab on every keystroke, so put the caret back
+   where the typist left it - otherwise the field loses focus after one letter. */
+function wireSearch(root){
+  var q=root.querySelector("#q");
+  if(!q) return;
+  q.oninput=function(){ SEARCH=q.value; render(); };
+  q.onkeydown=function(e){ if(e.key==="Escape"){ SEARCH=""; render(); } };
+  var c=root.querySelector("#q-clr");
+  if(c) c.onclick=function(){ SEARCH=""; render(); var f=document.getElementById("q"); if(f) f.focus(); };
+  if(SEARCH){
+    q.focus();
+    try{ q.setSelectionRange(q.value.length, q.value.length); }catch(e){}
+  }
+}
+
 var REPFILTER="all";
 try{ REPFILTER = localStorage.getItem("labmon-repfilter")||"all"; }catch(e){}
 
@@ -1811,6 +1986,7 @@ function render(editDate){
   else if(TAB==="doc") renderDoc(root);
   else if(TAB==="meds") renderMeds(root);
   else renderData(root);
+  wireSearch(root);
   document.querySelectorAll(".tabs button").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-tab")===TAB); });
   root.querySelectorAll("[data-open]").forEach(function(r){ r.onclick=function(){ SHEET_BACK=null; openModal(r.getAttribute("data-open")); }; });
   if(TAB==="doc") root.querySelectorAll(".flag[data-open]").forEach(function(r){ r.onclick=function(){
@@ -1859,11 +2035,94 @@ function render(editDate){
   root.querySelectorAll("[data-gomeds]").forEach(function(r){ r.onclick=function(){
     TAB="meds"; render(); window.scrollTo(0,0); }; });
 }
+/* --------------------------------------------------------------------------
+   Chart readout. The charts are rebuilt on every render, so binding per chart
+   would mean rebinding constantly; one document-level handler and one floating
+   element serve all of them. Works for a mouse (hover) and a thumb (drag along
+   the chart), and never blocks vertical scrolling.
+   -------------------------------------------------------------------------- */
+var TIP=null, TIPSVG=null;
+function hideTip(){
+  if(TIP) TIP.classList.remove("on");
+  if(TIPSVG){
+    var g=TIPSVG.querySelector(".hov");
+    if(g) g.style.display="none";
+    TIPSVG=null;
+  }
+}
+function showTip(svg, cx){
+  var pts;
+  try{ pts=JSON.parse(svg.getAttribute("data-pts")); }catch(e){ return; }
+  if(!pts || !pts.length) return;
+  var a=byId[svg.getAttribute("data-chart")];
+  if(!a) return;
+  var r=svg.getBoundingClientRect();
+  if(!r.width) return;
+
+  // viewBox units per CSS pixel - the svg is width:100% over a fixed viewBox
+  var k=svg.viewBox.baseVal.width/r.width;
+  var sx=(cx-r.left)*k;
+  var best=0, bd=Infinity;
+  for(var i=0;i<pts.length;i++){ var dx=Math.abs(pts[i][0]-sx); if(dx<bd){ bd=dx; best=i; } }
+  var p=pts[best], sev=sevOf(a,p[3]);
+
+  var h='<div class="d">'+fmtDate(p[2])+'</div>'+
+        '<div class="v">'+fmtNum(p[3])+(a.unit?'<small>'+esc(a.unit)+'</small>':'')+'</div>'+
+        '<span class="chip '+sev.cls+'">'+esc(sev.chip)+'</span>';
+  if(best>0){
+    var pv=pts[best-1][3], dv=p[3]-pv, pc=pv!==0?Math.abs(dv/pv*100):0;
+    h+='<div class="dl">'+
+       (Math.abs(dv)<1e-9 ? 'No change'
+         : (dv>0?'\u25b2 +':'\u25bc \u2212')+fmtNum(Math.abs(dv))+(pc>=1?' ('+Math.round(pc)+'%)':''))+
+       ' since '+fmtDate(pts[best-1][2])+'</div>';
+  }
+  if(p[4]) h+='<div class="lb">'+esc(p[4])+'</div>';
+
+  if(!TIP){ TIP=document.createElement("div"); TIP.className="charttip"; document.body.appendChild(TIP); }
+  TIP.innerHTML=h; TIP.classList.add("on");
+
+  var pad=10, px=r.left+p[0]/k, py=r.top+p[1]/k;
+  var left=px-TIP.offsetWidth/2, top=py-TIP.offsetHeight-16;
+  if(left<pad) left=pad;
+  if(left+TIP.offsetWidth>window.innerWidth-pad) left=window.innerWidth-pad-TIP.offsetWidth;
+  if(top<pad) top=py+20;                       // no room above: sit under the point
+  TIP.style.left=Math.round(left)+"px";
+  TIP.style.top=Math.round(top)+"px";
+
+  if(TIPSVG && TIPSVG!==svg){ var og=TIPSVG.querySelector(".hov"); if(og) og.style.display="none"; }
+  TIPSVG=svg;
+  var g=svg.querySelector(".hov");
+  if(g){
+    g.style.display="";
+    var ln=g.querySelector("line"), ci=g.querySelector("circle");
+    ln.setAttribute("x1",p[0]); ln.setAttribute("x2",p[0]);
+    ci.setAttribute("cx",p[0]); ci.setAttribute("cy",p[1]);
+  }
+}
+function chartUnder(ev){
+  return (ev.target && ev.target.closest) ? ev.target.closest("svg[data-pts]") : null;
+}
+document.addEventListener("pointermove", function(ev){
+  var svg=chartUnder(ev);
+  if(svg) showTip(svg, ev.clientX);
+  else if(TIPSVG) hideTip();
+}, { passive:true });
+document.addEventListener("pointerdown", function(ev){
+  var svg=chartUnder(ev);
+  if(svg) showTip(svg, ev.clientX);
+}, { passive:true });
+document.addEventListener("pointerup", function(ev){
+  if(ev.pointerType!=="mouse") setTimeout(hideTip, 2500);   // leave a thumb time to read
+}, { passive:true });
+document.addEventListener("pointercancel", hideTip, { passive:true });
+window.addEventListener("scroll", function(){ if(TIPSVG) hideTip(); }, { passive:true });
+window.addEventListener("resize", function(){ if(TIPSVG) hideTip(); }, { passive:true });
+
 /* A wheel only reports deltaY. Map it onto whichever chip row is under the
    cursor, so a trackpad or mouse can reach the end of the row. Delegated,
    because these rows are rebuilt on every render. */
 document.addEventListener("wheel", function(e){
-  var el = e.target && e.target.closest ? e.target.closest(".seg") : null;
+  var el = e.target && e.target.closest ? e.target.closest(".chiprow") : null;
   if(!el || el.scrollWidth <= el.clientWidth) return;
   if(Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;   // already a sideways gesture
   el.scrollLeft += e.deltaY;
@@ -1871,7 +2130,7 @@ document.addEventListener("wheel", function(e){
 }, { passive:false });
 
 document.querySelectorAll(".tabs button").forEach(function(b){
-  b.onclick=function(){ TAB=b.getAttribute("data-tab"); render(); window.scrollTo(0,0); };
+  b.onclick=function(){ SEARCH=""; TAB=b.getAttribute("data-tab"); render(); window.scrollTo(0,0); };
 });
 paintThemeBtn();
 document.getElementById("themeBtn").onclick=cycleTheme;
