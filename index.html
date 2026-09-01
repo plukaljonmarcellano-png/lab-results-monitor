@@ -326,8 +326,20 @@ label{font-size:12px;font-weight:700;color:var(--fg-2);display:block;margin:12px
 .banner{background:var(--lo-bg);color:var(--lo);border-radius:var(--r-sm);padding:10px 13px;font-size:12.5px;font-weight:700;margin-bottom:12px;display:none}
 .banner.show{display:block}
 
-.seg{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;margin-bottom:8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.seg{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;margin-bottom:8px;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain}
 .seg::-webkit-scrollbar{display:none}
+@media (pointer:fine){                    /* a mouse cannot swipe - give it a bar */
+  .seg{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+  .seg::-webkit-scrollbar{display:block;height:8px}
+  .seg::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px}
+  .seg::-webkit-scrollbar-thumb:hover{background:var(--fg-3)}
+  .seg::-webkit-scrollbar-track{background:transparent}
+}
+@media (min-width:560px){                 /* enough room to show them all at once */
+  .seg{flex-wrap:wrap;overflow-x:visible;padding-bottom:0}
+  .seg::-webkit-scrollbar{display:none}
+}
 .seg button{
   flex:none;padding:8px 15px;border-radius:99px;border:1px solid var(--line-2);
   background:var(--panel);color:var(--fg-2);font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;
@@ -396,7 +408,7 @@ label{font-size:12px;font-weight:700;color:var(--fg-2);display:block;margin:12px
 
 .datecard{display:flex;align-items:center;justify-content:space-between;padding:14px 2px;border-bottom:1px solid var(--line);gap:10px}
 .datecard>div:first-child{flex:1 1 auto;min-width:0}
-.datecard>div:last-child{flex:0 0 auto;display:flex;gap:6px;align-items:center}
+.datecard>div:first-child~div{flex:0 0 auto;display:flex;gap:6px;align-items:center}
 .datecard:last-child{border-bottom:none}
 .datecard b{font-size:15px;font-weight:700}
 .datecard .kind{
@@ -985,6 +997,32 @@ function bigChartSVG(a){
   function X(i){ return XT(pts[i].date); }
   function Y(v){ return PT+(1-(v-mn)/(mx-mn))*(H-PT-PB); }
 
+  /* Lay the medication labels out first. They need only the x scale, and
+     knowing how many rows they take lets the plot start below them rather
+     than underneath them. */
+  var medPlan=[], medRows=0;
+  (function(){
+    var placed=[];
+    (STATE.meds||[]).forEach(function(md){
+      if(!md.start || pts.length<2 || span<=0) return;
+      if(md.start<pts[0].date || md.start>pts[pts.length-1].date) return;
+      placed.push({x:XT(md.start), name:md.name});
+    });
+    placed.sort(function(p,q){ return p.x-q.x; });
+    var edge=[];                       // right edge used so far, per row
+    placed.forEach(function(mk){
+      var tw=mk.name.length*5.6+10;
+      var lx=Math.min(Math.max(mk.x-tw/2, PL), W-PR-tw);
+      var row=0;
+      while(edge[row]!==undefined && lx < edge[row]+3) row++;
+      edge[row]=lx+tw;
+      medPlan.push({x:mk.x, name:mk.name, lx:lx, tw:tw, row:row});
+    });
+    medRows=edge.length;
+  })();
+  var MEDTOP=14;
+  PT += medRows*17;                    // read by Y() at call time, so this lands
+
   var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;min-width:320px" xmlns="http://www.w3.org/2000/svg">';
   if(a.lo!=null || a.hi!=null){
     var bLo=a.lo!=null?a.lo:mn, bHi=a.hi!=null?a.hi:mx;
@@ -997,27 +1035,13 @@ function bigChartSVG(a){
     s+='<text x="'+(PL-6)+'" y="'+(gy+4)+'" text-anchor="end" font-size="11" fill="var(--fg-3)">'+fmtNum(gv)+'</text>';
   }
 
-  // medication markers, placed by real date (labels stacked when they cluster)
-  var placed=[];
-  (STATE.meds||[]).forEach(function(md){
-    if(!md.start || pts.length<2 || span<=0) return;
-    if(md.start<pts[0].date || md.start>pts[pts.length-1].date) return;
-    placed.push({x:XT(md.start), name:md.name});
+  // medication markers, drawn in the band reserved for them above the plot
+  medPlan.forEach(function(mk){
+    var ly=MEDTOP+mk.row*17;
+    s+='<line x1="'+mk.x.toFixed(1)+'" x2="'+mk.x.toFixed(1)+'" y1="'+(ly+15)+'" y2="'+(H-PB)+'" stroke="var(--mag)" stroke-width="1.5" stroke-dasharray="5 4" opacity="'+(0.9-mk.row*0.12).toFixed(2)+'"/>';
+    s+='<rect x="'+mk.lx.toFixed(1)+'" y="'+ly+'" width="'+mk.tw.toFixed(1)+'" height="15" rx="7" fill="var(--mag)"/>';
+    s+='<text x="'+(mk.lx+mk.tw/2).toFixed(1)+'" y="'+(ly+11)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">'+esc(mk.name)+'</text>';
   });
-  placed.sort(function(p,q){ return p.x-q.x; });
-  var rows=[];   // label rows, each holds the right edge used so far
-  placed.forEach(function(mk){
-    var lbl=mk.name, tw=lbl.length*5.6+10;
-    var lx=Math.min(Math.max(mk.x-tw/2, PL), W-PR-tw);
-    var row=0;
-    while(rows[row]!==undefined && lx < rows[row]+3) row++;   // drop to next row if it would collide
-    rows[row]=lx+tw;
-    var ly=PT-2+row*17;
-    s+='<line x1="'+mk.x.toFixed(1)+'" x2="'+mk.x.toFixed(1)+'" y1="'+(ly+15)+'" y2="'+(H-PB)+'" stroke="var(--mag)" stroke-width="1.5" stroke-dasharray="5 4" opacity="'+(0.9-row*0.12).toFixed(2)+'"/>';
-    s+='<rect x="'+lx.toFixed(1)+'" y="'+ly+'" width="'+tw.toFixed(1)+'" height="15" rx="7" fill="var(--mag)"/>';
-    s+='<text x="'+(lx+tw/2).toFixed(1)+'" y="'+(ly+11)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">'+esc(lbl)+'</text>';
-  });
-  var medRows = rows.length;
 
   if(pts.length>1){
     var P=pts.map(function(p,i){ return [X(i), Y(p.v)]; });
@@ -1038,22 +1062,39 @@ function bigChartSVG(a){
   }
 
   // thin out crowded labels so dense clusters stay readable
-  var lastV=-999, lastD=-999;
+  function planLabels(gap, endgap){
+    var keep={}, last=pts.length-1;
+    keep[0]=1; if(last>0) keep[last]=1;
+    var x0=X(0), xn=X(last), prev=x0;
+    for(var i=1;i<last;i++){
+      var xi=X(i);
+      if(xi-x0>=endgap && xn-xi>=endgap && xi-prev>=gap){ keep[i]=1; prev=xi; }
+    }
+    return keep;
+  }
+  /* A daily weight series packs 50+ points into the same width as a five-point
+     lipid series. Spacing the value labels by a fixed gap labels almost every
+     point in the dense case, and neighbouring dots then sit on top of the text.
+     Label fewer of them as the series gets denser. */
+  var VLAB=planLabels(pts.length>30?66:pts.length>15?48:36, 42);
+
+  /* Both ends always get a date - the newest reading is the one you look for -
+     so interior labels must clear them rather than overwrite them. End labels
+     are anchored to the edge, so they need more room than the gap between two
+     centred ones. */
+  var DLAB=planLabels(70,98);
   pts.forEach(function(p,i){
     var x=X(i), f=flag(a,p.v);
     var col=f==="ok"?"var(--teal)":f==="hi"?"var(--hi)":"var(--lo)";
     if(i===pts.length-1) s+='<circle cx="'+x.toFixed(1)+'" cy="'+Y(p.v)+'" r="9" fill="'+col+'" opacity=".18"/>';
     s+='<circle cx="'+x.toFixed(1)+'" cy="'+Y(p.v)+'" r="4.3" fill="'+col+'" stroke="var(--panel)" stroke-width="2"/>';
-    var edge=(i===0||i===pts.length-1);
-    if(edge || x-lastV>=34){
+    if(VLAB[i]){
       s+='<text x="'+x.toFixed(1)+'" y="'+(Y(p.v)-9)+'" text-anchor="middle" font-size="11" font-weight="700" fill="var(--fg)">'+fmtNum(p.v)+'</text>';
-      lastV=x;
     }
-    if(edge || x-lastD>=62){
+    if(DLAB[i]){
       var anch = i===0?"start" : (i===pts.length-1?"end":"middle");
       var tx = i===0?PL-2 : (i===pts.length-1?W-PR+2:x);
       s+='<text x="'+tx.toFixed(1)+'" y="'+(H-14)+'" text-anchor="'+anch+'" font-size="10" fill="var(--fg-3)">'+fmtDate(p.date)+'</text>';
-      lastD=x;
     }
     s+='<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+(H-PB)+'" y2="'+(H-PB+4)+'" stroke="var(--line)"/>';
   });
@@ -1818,6 +1859,17 @@ function render(editDate){
   root.querySelectorAll("[data-gomeds]").forEach(function(r){ r.onclick=function(){
     TAB="meds"; render(); window.scrollTo(0,0); }; });
 }
+/* A wheel only reports deltaY. Map it onto whichever chip row is under the
+   cursor, so a trackpad or mouse can reach the end of the row. Delegated,
+   because these rows are rebuilt on every render. */
+document.addEventListener("wheel", function(e){
+  var el = e.target && e.target.closest ? e.target.closest(".seg") : null;
+  if(!el || el.scrollWidth <= el.clientWidth) return;
+  if(Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;   // already a sideways gesture
+  el.scrollLeft += e.deltaY;
+  e.preventDefault();
+}, { passive:false });
+
 document.querySelectorAll(".tabs button").forEach(function(b){
   b.onclick=function(){ TAB=b.getAttribute("data-tab"); render(); window.scrollTo(0,0); };
 });
