@@ -1437,6 +1437,7 @@ function reportKind(r){                       // "lab" if it holds anything a la
   if(!ks.length) return "lab";
   return ks.some(function(k){ return !isSelfMeasured(k); }) ? "lab" : "vitals";
 }
+var MEDEDIT=null;                             // index of the medication being edited
 var REPFILTER="all";
 try{ REPFILTER = localStorage.getItem("labmon-repfilter")||"all"; }catch(e){}
 
@@ -1444,29 +1445,64 @@ function persist(){ SB.save(); }
 
 function renderMeds(root){
   var meds=STATE.meds||[];
+  var today=new Date().toISOString().slice(0,10);
   var h='<div class="card"><h2>Medications</h2>'+
-    '<div class="note" style="margin:0 0 10px">Each medication draws a marker line on every trend chart, so you can see what changed and when.</div>';
+    '<div class="note" style="margin:0 0 10px">Each medication draws a marker line on every trend chart, so you can see what changed and when. '+
+    'Leave the end date blank while you are still taking it.</div>';
   if(!meds.length) h+='<div class="empty">None added yet.</div>';
   meds.forEach(function(md,i){
-    h+='<div class="datecard"><div><b>'+esc(md.name)+'</b><span>Started '+fmtDate(md.start)+(md.note?' · '+esc(md.note):'')+'</span></div>'+
-       '<div><button class="mini-btn del" data-delmed="'+i+'">Remove</button></div></div>';
+    var tag='', when='Started '+fmtDate(md.start);
+    if(md.until){
+      var d=daysBetween(today, md.until);
+      when += ' \u00b7 ' + (d<0 ? 'ended '+fmtDate(md.until) : 'ends '+fmtDate(md.until));
+      if(d<0)       tag='<span class="kind" style="color:var(--s3);border-color:var(--s3)">ended</span>';
+      else if(d<=21)tag='<span class="kind" style="color:var(--s1);border-color:var(--s1)">'+d+'d left</span>';
+    } else {
+      when += ' \u00b7 ongoing';
+      tag='<span class="kind">ongoing</span>';
+    }
+    h+='<div class="datecard"><div><b>'+esc(md.name)+'</b>'+tag+
+         '<span>'+when+(md.note?' \u00b7 '+esc(md.note):'')+'</span></div>'+
+       '<div><button class="mini-btn" data-editmed="'+i+'">Edit</button>'+
+            '<button class="mini-btn del" data-delmed="'+i+'">Remove</button></div></div>';
   });
-  h+='</div><div class="card"><h2>Add a medication</h2>'+
-     '<label>Name</label><input type="text" id="md-name" placeholder="e.g. Mounjaro">'+
-     '<label>Start date</label><input type="date" id="md-date">'+
-     '<label>Note (optional)</label><input type="text" id="md-note" placeholder="dose, reason, prescriber">'+
-     '<button class="btn" id="md-save">Add a medication</button></div>';
+  var ed = (MEDEDIT!=null && meds[MEDEDIT]) ? meds[MEDEDIT] : null;
+  h+='</div><div class="card"><h2>'+(ed?'Edit '+esc(ed.name):'Add a medication')+'</h2>'+
+     '<label>Name</label><input type="text" id="md-name" placeholder="e.g. Mounjaro" value="'+(ed?esc(ed.name):'')+'">'+
+     '<div class="grid2">'+
+       '<div><label>Start date</label><input type="date" id="md-date" value="'+(ed?esc(ed.start||''):'')+'"></div>'+
+       '<div><label>End date</label><input type="date" id="md-until" value="'+(ed?esc(ed.until||''):'')+'"></div>'+
+     '</div>'+
+     '<div class="note" style="margin:6px 0 0">Blank end date means you are still taking it.</div>'+
+     '<label>Note (optional)</label><input type="text" id="md-note" placeholder="dose, reason, prescriber" value="'+(ed?esc(ed.note||''):'')+'">'+
+     '<button class="btn" id="md-save" style="margin-top:12px">'+(ed?'Save changes':'Add a medication')+'</button>'+
+     (ed?'<button class="btn ghost" id="md-cancel">Cancel</button>':'')+
+     '</div>';
   root.innerHTML=h;
+
   document.getElementById("md-save").onclick=function(){
-    var n=document.getElementById("md-name").value.trim(), d=document.getElementById("md-date").value;
+    var n=document.getElementById("md-name").value.trim(),
+        d=document.getElementById("md-date").value,
+        u=document.getElementById("md-until").value,
+        nt=document.getElementById("md-note").value.trim();
     if(!n||!d){ alert("Enter a name and start date."); return; }
+    if(u && u<d){ alert("The end date is before the start date."); return; }
     if(!STATE.meds) STATE.meds=[];
-    SB.medsDirty=true; STATE.meds.push({name:n,start:d,note:document.getElementById("md-note").value.trim()});
-    persist(); render();
+    SB.medsDirty=true;
+    if(ed) STATE.meds[MEDEDIT]={name:n,start:d,until:u,note:nt};
+    else   STATE.meds.push({name:n,start:d,until:u,note:nt});
+    MEDEDIT=null; persist(); render();
+    themeToast(ed?"Medication updated":"Medication added");
   };
+  var mc=document.getElementById("md-cancel");
+  if(mc) mc.onclick=function(){ MEDEDIT=null; render(); };
+
+  root.querySelectorAll("[data-editmed]").forEach(function(b){ b.onclick=function(){
+    MEDEDIT=+b.getAttribute("data-editmed"); render(); window.scrollTo(0,document.body.scrollHeight);
+  };});
   root.querySelectorAll("[data-delmed]").forEach(function(b){ b.onclick=function(){
     var i=+b.getAttribute("data-delmed");
-    if(confirm("Remove "+STATE.meds[i].name+"?")){ SB.medsDirty=true; STATE.meds.splice(i,1); persist(); render(); }
+    if(confirm("Remove "+STATE.meds[i].name+"?")){ SB.medsDirty=true; STATE.meds.splice(i,1); MEDEDIT=null; persist(); render(); }
   };});
 }
 function daysBetween(a,b){ return Math.round((+new Date(b)-+new Date(a))/86400000); }
