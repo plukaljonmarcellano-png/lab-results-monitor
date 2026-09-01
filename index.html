@@ -760,6 +760,277 @@ function buildDocumentHTML(){
 
 function persist(){ SB.save(); }
 
+function renderMeds(root){
+  var meds=STATE.meds||[];
+  var h='<div class="card"><h2>Medications</h2>'+
+    '<div class="note" style="margin:0 0 10px">Each medication draws a marker line on every trend chart, so you can see what changed and when.</div>';
+  if(!meds.length) h+='<div class="empty">None added yet.</div>';
+  meds.forEach(function(md,i){
+    h+='<div class="datecard"><div><b>'+esc(md.name)+'</b><span>Started '+fmtDate(md.start)+(md.note?' · '+esc(md.note):'')+'</span></div>'+
+       '<div><button class="mini-btn del" data-delmed="'+i+'">Remove</button></div></div>';
+  });
+  h+='</div><div class="card"><h2>Add a medication</h2>'+
+     '<label>Name</label><input type="text" id="md-name" placeholder="e.g. Mounjaro">'+
+     '<label>Start date</label><input type="date" id="md-date">'+
+     '<label>Note (optional)</label><input type="text" id="md-note" placeholder="dose, reason, prescriber">'+
+     '<button class="btn" id="md-save">Add a medication</button></div>';
+  root.innerHTML=h;
+  document.getElementById("md-save").onclick=function(){
+    var n=document.getElementById("md-name").value.trim(), d=document.getElementById("md-date").value;
+    if(!n||!d){ alert("Enter a name and start date."); return; }
+    if(!STATE.meds) STATE.meds=[];
+    STATE.meds.push({name:n,start:d,note:document.getElementById("md-note").value.trim()});
+    persist(); render();
+  };
+  root.querySelectorAll("[data-delmed]").forEach(function(b){ b.onclick=function(){
+    var i=+b.getAttribute("data-delmed");
+    if(confirm("Remove "+STATE.meds[i].name+"?")){ STATE.meds.splice(i,1); persist(); render(); }
+  };});
+}
+function daysBetween(a,b){ return Math.round((+new Date(b)-+new Date(a))/86400000); }
+
+function buildFlags(){
+  var rs=sortedResults(); if(!rs.length) return [];
+  var latestDate=rs[rs.length-1].date, out=[];
+  STATE.analytes.forEach(function(a){
+    var pts=series(a.id); if(!pts.length) return;
+    var cur=pts[pts.length-1], f=flag(a,cur.v);
+    var age=daysBetween(cur.date, latestDate);
+    var vtxt=fmtNum(cur.v)+" "+a.unit;
+
+    if(f!=="ok"){
+      // how far out of range
+      var far=false;
+      if(f==="hi" && a.hi!=null) far = cur.v > a.hi*1.8;
+      if(f==="lo" && a.lo!=null) far = cur.v < a.lo*0.7;
+      // persistently abnormal?
+      var streak=0;
+      for(var i=pts.length-1;i>=0;i--){ if(flag(a,pts[i].v)!=="ok") streak++; else break; }
+      var pri = (far||streak>=3) ? 1 : 2;
+      var why = (f==="hi"?"Above":"Below")+" the reference range of "+rangeText(a)+".";
+      if(streak>=3) why += " Has been "+(f==="hi"?"high":"low")+" on "+streak+" consecutive tests.";
+      if(age>180) why += " Last measured "+fmtDate(cur.date)+", over 6 months ago.";
+      out.push({pri:pri, name:a.name, val:vtxt, date:cur.date, why:why,
+        ask: age>180 ? "Should this be repeated? It has not been rechecked since "+fmtDate(cur.date)+"."
+                     : "What is causing this, and does it need treatment or follow-up?"});
+      return;
+    }
+
+    // was abnormal before, now normal, but not rechecked in a long time
+    if(pts.length>=2 && age>180 && flag(a,pts[pts.length-2].v)!=="ok"){
+      out.push({pri:3,name:a.name,val:vtxt,date:cur.date,
+        why:"Previously abnormal, normal at the last check on "+fmtDate(cur.date)+" — not repeated since.",
+        ask:"Is a repeat test due?"});
+      return;
+    }
+
+    // responded strongly to treatment - now well under target
+    if(a.lowerBetter && a.hi!=null && cur.v < a.hi*0.45 && pts.length>=2){
+      var everHigh=pts.some(function(p){ return p.v>a.hi; });
+      if(everHigh) out.push({pri:3,name:a.name,val:vtxt,date:cur.date,
+        why:"Was above range previously and is now well below the target of "+rangeText(a)+".",
+        ask:"Is the current dose still the right one now that this has fallen this far?"});
+    }
+  });
+
+  // prescriptions ending or lapsed
+  var today=new Date().toISOString().slice(0,10);
+  (STATE.meds||[]).forEach(function(md){
+    if(!md.until) return;
+    var d=daysBetween(today, md.until);
+    if(d<0) out.push({pri:1,name:md.name+" — prescription lapsed",val:fmtDate(md.until),date:md.until,
+      why:"The prescription end date has passed.",ask:"Should this be refilled or has it been stopped intentionally?"});
+    else if(d<=21) out.push({pri:2,name:md.name+" — refill due",val:fmtDate(md.until),date:md.until,
+      why:"Prescription ends in "+d+" day"+(d===1?"":"s")+".",ask:"Should this be renewed?"});
+  });
+
+  out.sort(function(x,y){ return x.pri-y.pri; });
+  return out;
+}
+
+function renderDoc(root){
+  var flags=buildFlags(), rs=sortedResults();
+  if(!rs.length){ root.innerHTML='<div class="empty">No results yet.</div>'; return; }
+  var h='<div class="card"><h2>What to raise with your doctor</h2>'+
+    '<div class="note" style="margin:0">Generated from your results as of '+fmtDate(rs[rs.length-1].date)+
+    '. Ordered by how much attention they likely need.</div></div>';
+  if(!flags.length) h+='<div class="empty">Nothing flagged — everything is within range and up to date.</div>';
+  var labels={1:"Needs attention",2:"Worth raising",3:"For discussion"};
+  var last=null;
+  flags.forEach(function(x){
+    if(x.pri!==last){ h+='<div class="sect">'+labels[x.pri]+'</div>'; last=x.pri; }
+    h+='<div class="flag p'+x.pri+'"><div class="top"><h4>'+esc(x.name)+'</h4><span class="val">'+esc(x.val)+'</span></div>'+
+       '<div class="why">'+esc(x.why)+'</div>'+
+       '<div class="ask"><b>Ask:</b> '+esc(x.ask)+'</div></div>';
+  });
+  h+='<button class="btn" id="doc-pdf">Export PDF / Print</button>'+
+     '<button class="btn ghost" id="doc-copy">Copy this list</button>'+
+     '<div class="disc">This list is produced by comparing your recorded results against the reference ranges printed on your lab reports. It is a prompt for conversation, not a diagnosis — your doctor has context these numbers do not.</div>';
+  root.innerHTML=h;
+  document.getElementById("doc-pdf").onclick=doPrint;
+  document.getElementById("doc-copy").onclick=function(){
+    var t="Lab questions — as of "+fmtDate(rs[rs.length-1].date)+"\n\n";
+    flags.forEach(function(x){ t+="• "+x.name+": "+x.val+" ("+fmtDate(x.date)+")\n  "+x.why+"\n  Ask: "+x.ask+"\n\n"; });
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function(){alert("Copied.");},function(){prompt("Copy:",t);});
+    else prompt("Copy:",t);
+  };
+}
+
+function buildPrint(){
+  var rs=sortedResults(); if(!rs.length) return "";
+  var latest=rs[rs.length-1];
+  var h='<h1>Lab Results Summary</h1>'+
+    '<div class="meta">Latest report '+fmtDate(latest.date)+(latest.lab?' &middot; '+esc(latest.lab):'')+
+    ' &middot; '+rs.length+' reports from '+fmtDate(rs[0].date)+' to '+fmtDate(latest.date)+
+    ' &middot; generated '+fmtDate(new Date().toISOString().slice(0,10))+'</div>';
+
+  var meds=STATE.meds||[];
+  if(meds.length){
+    h+='<h2>Medications</h2><table><tr><th>Medication</th><th>Started</th><th>Details</th></tr>';
+    meds.slice().sort(function(a,b){return a.start<b.start?-1:1;}).forEach(function(md){
+      h+='<tr><td><b>'+esc(md.name)+'</b></td><td class="n">'+fmtDate(md.start)+'</td><td>'+esc(md.note||'')+
+         (md.until?' (script to '+fmtDate(md.until)+')':'')+'</td></tr>';
+    });
+    h+='</table>';
+  }
+
+  var flags=buildFlags();
+  if(flags.length){
+    var lab={1:"Needs attention",2:"Worth raising",3:"For discussion"};
+    h+='<h2>To Discuss With My Doctor</h2>';
+    var last=null;
+    flags.forEach(function(x){
+      if(x.pri!==last){ h+='<div style="font-size:9pt;font-weight:700;color:#555;margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px">'+lab[x.pri]+'</div>'; last=x.pri; }
+      h+='<div class="fl"><b>'+esc(x.name)+' &mdash; '+esc(x.val)+'</b><div class="w">'+esc(x.why)+'</div>'+
+         '<div class="a"><b>Ask:</b> '+esc(x.ask)+'</div></div>';
+    });
+  }
+
+  // latest values by category
+  h+='<div class="pb"></div><h2>Latest Results &mdash; '+fmtDate(latest.date)+'</h2>';
+  var cats=[]; STATE.analytes.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
+  cats.forEach(function(c){
+    var rows='';
+    STATE.analytes.filter(function(a){return a.cat===c;}).forEach(function(a){
+      var pts=series(a.id); if(!pts.length) return;
+      var cur=pts[pts.length-1], f=flag(a,cur.v);
+      var prev=pts.length>1?pts[pts.length-2]:null;
+      rows+='<tr><td>'+esc(a.name)+'</td><td class="n">'+fmtNum(cur.v)+' '+esc(a.unit)+'</td>'+
+            '<td class="n"><span class="st '+f+'">'+flagLabel(f)+'</span></td>'+
+            '<td class="n">'+esc(rangeText(a))+'</td>'+
+            '<td class="n">'+(prev?fmtNum(prev.v)+' ('+fmtDate(prev.date)+')':'&ndash;')+'</td>'+
+            '<td class="n">'+(cur.date===latest.date?'':fmtDate(cur.date))+'</td></tr>';
+    });
+    if(rows) h+='<h2 style="background:var(--teal-d)">'+esc(c)+'</h2><table>'+
+      '<tr><th>Test</th><th>Result</th><th>Status</th><th>Reference</th><th>Previous</th><th>Measured</th></tr>'+rows+'</table>';
+  });
+
+  // charts for anything abnormal now or previously
+  var interesting=STATE.analytes.filter(function(a){
+    var pts=series(a.id); if(pts.length<2) return false;
+    return pts.some(function(p){ return flag(a,p.v)!=="ok"; });
+  });
+  if(interesting.length){
+    h+='<div class="pb"></div><h2>Trends</h2>';
+    interesting.forEach(function(a){
+      var pts=series(a.id), cur=pts[pts.length-1];
+      h+='<div class="ch"><div class="cap">'+esc(a.name)+'</div>'+
+         '<div class="sub">Reference '+esc(rangeText(a))+' &middot; latest '+fmtNum(cur.v)+' '+esc(a.unit)+' ('+fmtDate(cur.date)+')</div>'+
+         bigChartSVG(a)+'</div>';
+    });
+  }
+
+  h+='<div class="disc2">Compiled from lab reports entered by the patient. Values and reference ranges are as printed on the source reports; where two laboratories used different ranges, the ranges shown here may differ slightly from the original report. This document is a personal record to support discussion with a clinician, not a medical assessment.</div>';
+  return h;
+}
+
+function buildTrendPrint(ids){
+  var rs=sortedResults();
+  var list=STATE.analytes.filter(function(a){ return ids.indexOf(a.id)>=0 && series(a.id).length; });
+  var h='<h1>Lab Trends</h1><div class="meta">'+list.length+' test'+(list.length===1?'':'s')+
+        ' &middot; data from '+fmtDate(rs[0].date)+' to '+fmtDate(rs[rs.length-1].date)+
+        ' &middot; generated '+fmtDate(new Date().toISOString().slice(0,10))+'</div>';
+  var meds=STATE.meds||[];
+  if(meds.length){
+    h+='<div class="meta"><b>Medication markers:</b> '+meds.slice().sort(function(a,b){return a.start<b.start?-1:1;})
+        .map(function(md){return esc(md.name)+' from '+fmtDate(md.start);}).join(' &middot; ')+'</div>';
+  }
+  var cats=[]; list.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
+  cats.forEach(function(c,ci){
+    h+= (ci?'<div class="pb"></div>':'') + '<h2>'+esc(c)+'</h2>';
+    list.filter(function(a){return a.cat===c;}).forEach(function(a){
+      var pts=series(a.id), cur=pts[pts.length-1], f=flag(a,cur.v);
+      h+='<div class="ch"><div class="cap">'+esc(a.name)+' <span class="st '+f+'">'+flagLabel(f)+'</span></div>'+
+         '<div class="sub">Reference '+esc(rangeText(a))+' &middot; latest '+fmtNum(cur.v)+' '+esc(a.unit)+' ('+fmtDate(cur.date)+')</div>'+
+         bigChartSVG(a)+
+         '<table><tr><th>Date</th>'+pts.map(function(p){return '<th style="text-align:right">'+fmtDate(p.date)+'</th>';}).join('')+'</tr>'+
+         '<tr><td>Result</td>'+pts.map(function(p){var pf=flag(a,p.v);return '<td class="n"><span class="st '+pf+'">'+fmtNum(p.v)+'</span></td>';}).join('')+'</tr></table>'+
+         '</div>';
+    });
+  });
+  h+='<div class="disc2">Compiled from lab reports entered by the patient. Reference ranges are as printed on the source reports; where two laboratories used different ranges, the range shown may differ slightly from an individual report. Chart spacing reflects real elapsed time. Personal record for discussion with a clinician, not a medical assessment.</div>';
+  return h;
+}
+
+function openExportPicker(){
+  var cats=[]; STATE.analytes.forEach(function(a){ if(series(a.id).length && cats.indexOf(a.cat)<0) cats.push(a.cat); });
+  var h='<h3>Export trends</h3><div class="rng">Choose whole sections or individual tests.</div>'+
+        '<div class="pickbar"><button id="pk-all">Select all</button><button id="pk-none">Clear</button><button id="pk-abn">Only abnormal</button></div><div class="pick">';
+  cats.forEach(function(c){
+    var cid='c_'+c.replace(/[^A-Za-z]/g,'');
+    h+='<label class="cat"><input type="checkbox" data-cat="'+esc(c)+'" id="'+cid+'"> '+esc(c)+'</label>';
+    STATE.analytes.filter(function(a){return a.cat===c && series(a.id).length;}).forEach(function(a){
+      var pts=series(a.id), f=flag(a,pts[pts.length-1].v);
+      h+='<label class="item"><input type="checkbox" data-an="'+a.id+'" data-incat="'+esc(c)+'" data-abn="'+(f!=="ok"?1:0)+'"> '+
+         esc(a.name)+'<span class="u">'+pts.length+' result'+(pts.length===1?'':'s')+'</span></label>';
+    });
+  });
+  h+='</div><button class="btn" id="pk-go">Export PDF / Print</button><button class="btn ghost" id="pk-cancel">Cancel</button>';
+  document.getElementById("sheet").innerHTML=h;
+  document.getElementById("modal").classList.add("open");
+
+  var sheet=document.getElementById("sheet");
+  function boxes(){ return Array.prototype.slice.call(sheet.querySelectorAll("input[data-an]")); }
+  function syncCats(){
+    sheet.querySelectorAll("input[data-cat]").forEach(function(cb){
+      var kids=boxes().filter(function(b){ return b.getAttribute("data-incat")===cb.getAttribute("data-cat"); });
+      var on=kids.filter(function(b){return b.checked;}).length;
+      cb.checked = on===kids.length && kids.length>0;
+      cb.indeterminate = on>0 && on<kids.length;
+    });
+  }
+  sheet.querySelectorAll("input[data-cat]").forEach(function(cb){
+    cb.onchange=function(){
+      boxes().forEach(function(b){ if(b.getAttribute("data-incat")===cb.getAttribute("data-cat")) b.checked=cb.checked; });
+      syncCats();
+    };
+  });
+  boxes().forEach(function(b){ b.onchange=syncCats; });
+  document.getElementById("pk-all").onclick=function(){ boxes().forEach(function(b){b.checked=true;}); syncCats(); };
+  document.getElementById("pk-none").onclick=function(){ boxes().forEach(function(b){b.checked=false;}); syncCats(); };
+  document.getElementById("pk-abn").onclick=function(){ boxes().forEach(function(b){b.checked=b.getAttribute("data-abn")==="1";}); syncCats(); };
+  document.getElementById("pk-cancel").onclick=closeModal;
+  document.getElementById("pk-go").onclick=function(){
+    var ids=boxes().filter(function(b){return b.checked;}).map(function(b){return b.getAttribute("data-an");});
+    if(!ids.length){ alert("Select at least one test."); return; }
+    closeModal();
+    document.getElementById("printview").innerHTML=buildTrendPrint(ids);
+    setTimeout(function(){ window.print(); }, 80);
+  };
+  // preselect whatever category the Trends tab is filtered to
+  if(TRENDCAT!=="All"){
+    boxes().forEach(function(b){ b.checked = b.getAttribute("data-incat")===TRENDCAT; });
+  } else {
+    boxes().forEach(function(b){ b.checked = b.getAttribute("data-abn")==="1"; });
+  }
+  syncCats();
+}
+
+function doPrint(){
+  document.getElementById("printview").innerHTML=buildPrint();
+  setTimeout(function(){ window.print(); }, 60);
+}
+
 function render(editDate){
   var root=document.getElementById("root");
   if(TAB==="dash") renderDash(root);
