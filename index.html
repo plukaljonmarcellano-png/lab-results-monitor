@@ -204,6 +204,13 @@ label{font-size:12px;font-weight:700;color:var(--fg-2);display:block;margin:12px
 .flag .ask{font-size:13.5px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 .flag .ask b{color:var(--cy)}
 .sect{font-size:12.5px;font-weight:700;color:var(--fg-2);margin:18px 0 10px}
+.kpi[data-kpi]{cursor:pointer;transition:transform .12s}
+.kpi[data-kpi]:active{transform:scale(.97)}
+.flag.tappable{cursor:pointer}
+.flag .seeall{font-size:12.5px;font-weight:700;color:var(--cy);margin-top:9px}
+.card h2.taph{cursor:pointer;justify-content:space-between}
+.card h2.taph .go{font-size:12px;font-weight:700;color:var(--cy);letter-spacing:0}
+.datecard[data-report]{cursor:pointer}
 .disc{font-size:12px;color:var(--fg-3);background:var(--panel-2);border-radius:14px;padding:13px 15px;margin-top:16px;line-height:1.55}
 
 .datecard{display:flex;align-items:center;justify-content:space-between;padding:14px 2px;border-bottom:1px solid var(--line);gap:10px}
@@ -616,9 +623,9 @@ function renderDash(root){
   var nflag=buildFlags().filter(function(x){return x.pri<3;}).length;
   var h = nflag ? '<div class="card" id="docjump" style="cursor:pointer;border-left:4px solid var(--mag)"><h2 style="margin:0">'+nflag+' item'+(nflag===1?'':'s')+' to raise with your doctor →</h2></div>' : '';
   h+='<div class="kpis">'+
-    '<div class="kpi ok"><div class="n">'+counts.ok+'</div><div class="l">Within range</div></div>'+
-    '<div class="kpi hi"><div class="n">'+counts.hi+'</div><div class="l">High</div></div>'+
-    '<div class="kpi lo"><div class="n">'+counts.lo+'</div><div class="l">Low</div></div></div>';
+    '<div class="kpi ok" data-kpi="ok"><div class="n">'+counts.ok+'</div><div class="l">Within range</div></div>'+
+    '<div class="kpi hi" data-kpi="hi"><div class="n">'+counts.hi+'</div><div class="l">High</div></div>'+
+    '<div class="kpi lo" data-kpi="lo"><div class="n">'+counts.lo+'</div><div class="l">Low</div></div></div>';
   if(abn.length){
     h+='<div class="card abn-list"><h2>Outside the reference range ('+fmtDate(latest.date)+')</h2>';
     abn.forEach(function(a){ h+=analyteRow(a); });
@@ -627,7 +634,7 @@ function renderDash(root){
   var cats=[]; STATE.analytes.forEach(function(a){ if(cats.indexOf(a.cat)<0) cats.push(a.cat); });
   cats.forEach(function(c){
     var rows=STATE.analytes.filter(function(a){return a.cat===c && series(a.id).length;}).map(analyteRow).join("");
-    if(rows) h+='<div class="card"><h2>'+esc(c)+'</h2>'+rows+'</div>';
+    if(rows) h+='<div class="card"><h2 class="taph" data-cat="'+esc(c)+'">'+esc(c)+'<span class="go">All trends &rsaquo;</span></h2>'+rows+'</div>';
   });
   root.innerHTML=h;
   var dj=document.getElementById("docjump");
@@ -691,7 +698,7 @@ function renderData(root){
   if(!rs.length) h+='<div class="empty">Nothing saved yet.</div>';
   rs.forEach(function(r){
     var n=Object.keys(r.values).length;
-    h+='<div class="datecard"><div><b>'+fmtDate(r.date)+'</b><span>'+n+' tests'+(r.lab?" · "+esc(r.lab):"")+'</span></div>'+
+    h+='<div class="datecard" data-report="'+r.date+'"><div><b>'+fmtDate(r.date)+'</b><span>'+n+' tests'+(r.lab?" · "+esc(r.lab):"")+' &middot; tap to view</span></div>'+
        '<div><button class="mini-btn" data-edit="'+r.date+'">Edit</button><button class="mini-btn del" data-del="'+r.date+'">Delete</button></div></div>';
   });
   h+='</div>';
@@ -726,6 +733,62 @@ function renderData(root){
   };
 }
 
+var SHEET_BACK=null;
+
+function sheetOpen(html){
+  document.getElementById("sheet").innerHTML=html;
+  document.getElementById("modal").classList.add("open");
+  document.getElementById("sheet").scrollTop=0;
+  var b=document.getElementById("m-back");
+  if(b) b.onclick=function(){ var f=SHEET_BACK; SHEET_BACK=null; if(f) f(); };
+  var c=document.getElementById("m-close");
+  if(c) c.onclick=closeModal;
+  document.getElementById("sheet").querySelectorAll("[data-open]").forEach(function(r){
+    r.onclick=function(){ openModal(r.getAttribute("data-open")); };
+  });
+}
+
+function listSheet(title, sub, analytes, back){
+  SHEET_BACK=back||null;
+  var rows=analytes.map(function(a){
+    var pts=series(a.id); if(!pts.length) return "";
+    var cur=pts[pts.length-1], f=flag(a,cur.v);
+    return '<div class="row" data-open="'+a.id+'">'+
+      '<div class="nm"><b>'+esc(a.name)+'</b><span>'+esc(rangeText(a))+'</span></div>'+
+      '<div class="val"><b>'+fmtNum(cur.v)+'</b><span class="chip '+f+'">'+flagLabel(f)+'</span></div>'+
+      gaugeHTML(a,cur.v)+'</div>';
+  }).join("");
+  sheetOpen('<h3>'+esc(title)+'</h3><div class="rng">'+esc(sub)+'</div>'+
+    (rows||'<div class="empty">Nothing here.</div>')+
+    '<button class="btn ghost" id="m-close">Close</button>');
+}
+
+function openStatusList(st){
+  var rs=sortedResults(); if(!rs.length) return;
+  var latest=rs[rs.length-1];
+  var list=STATE.analytes.filter(function(a){
+    var v=latest.values[a.id]; return v!=null && flag(a,v)===st;
+  });
+  var t = st==="ok" ? "Within range" : st==="hi" ? "Above range" : "Below range";
+  listSheet(t, list.length+" of your results on "+fmtDate(latest.date)+" — tap any test for its history", list,
+            function(){ openStatusList(st); });
+}
+
+function openReport(date){
+  var r=STATE.results.filter(function(x){return x.date===date;})[0]; if(!r) return;
+  var list=STATE.analytes.filter(function(a){ return r.values[a.id]!=null; });
+  var rows=list.map(function(a){
+    var v=r.values[a.id], f=flag(a,v);
+    return '<div class="row" data-open="'+a.id+'">'+
+      '<div class="nm"><b>'+esc(a.name)+'</b><span>'+esc(rangeText(a))+'</span></div>'+
+      '<div class="val"><b>'+fmtNum(v)+'</b><span class="chip '+f+'">'+flagLabel(f)+'</span></div>'+
+      gaugeHTML(a,v)+'</div>';
+  }).join("");
+  SHEET_BACK=function(){ openReport(date); };
+  sheetOpen('<h3>'+fmtDate(date)+'</h3><div class="rng">'+list.length+' tests'+(r.lab?' &middot; '+esc(r.lab):'')+'</div>'+
+    rows+'<button class="btn ghost" id="m-close">Close</button>');
+}
+
 function openModal(id){
   var a=byId[id]; if(!a) return;
   var pts=series(id);
@@ -734,14 +797,13 @@ function openModal(id){
     return '<tr><td>'+fmtDate(p.date)+'</td><td><b>'+fmtNum(p.v)+'</b> '+esc(a.unit)+'</td><td><span class="chip '+f+'">'+flagLabel(f)+'</span></td></tr>';
   }).join("");
   var about = a.desc ? '<div class="about"><p>'+esc(a.desc)+'</p>'+(a.hint?'<p class="hint">'+esc(a.hint)+'</p>':'')+'</div>' : '';
-  document.getElementById("sheet").innerHTML=
+  var back = SHEET_BACK ? '<button class="btn ghost" id="m-back" style="margin-top:8px">&lsaquo; Back</button>' : '';
+  sheetOpen(
     '<h3>'+esc(a.name)+'</h3><div class="rng">Reference '+esc(rangeText(a))+'</div>'+
     '<div style="margin:-4px 0 18px">'+gaugeHTML(a,pts[pts.length-1].v)+'</div>'+about+
     '<div class="chartbox">'+bigChartSVG(a)+'</div>'+
     '<table class="hist"><tr><th>Date</th><th>Result</th><th>Status</th></tr>'+rows+'</table>'+
-    '<button class="btn ghost" id="m-close">Close</button>';
-  document.getElementById("modal").classList.add("open");
-  document.getElementById("m-close").onclick=closeModal;
+    '<button class="btn ghost" id="m-close">Close</button>'+back);
 }
 function closeModal(){ document.getElementById("modal").classList.remove("open"); }
 document.getElementById("modal").addEventListener("click",function(e){ if(e.target===this) closeModal(); });
@@ -810,7 +872,7 @@ function buildFlags(){
       var why = (f==="hi"?"Above":"Below")+" the reference range of "+rangeText(a)+".";
       if(streak>=3) why += " Has been "+(f==="hi"?"high":"low")+" on "+streak+" consecutive tests.";
       if(age>180) why += " Last measured "+fmtDate(cur.date)+", over 6 months ago.";
-      out.push({pri:pri, name:a.name, val:vtxt, date:cur.date, why:why,
+      out.push({pri:pri, id:a.id, name:a.name, val:vtxt, date:cur.date, why:why,
         ask: age>180 ? "Should this be repeated? It has not been rechecked since "+fmtDate(cur.date)+"."
                      : "What is causing this, and does it need treatment or follow-up?"});
       return;
@@ -818,7 +880,7 @@ function buildFlags(){
 
     // was abnormal before, now normal, but not rechecked in a long time
     if(pts.length>=2 && age>180 && flag(a,pts[pts.length-2].v)!=="ok"){
-      out.push({pri:3,name:a.name,val:vtxt,date:cur.date,
+      out.push({pri:3,id:a.id,name:a.name,val:vtxt,date:cur.date,
         why:"Previously abnormal, normal at the last check on "+fmtDate(cur.date)+" — not repeated since.",
         ask:"Is a repeat test due?"});
       return;
@@ -827,7 +889,7 @@ function buildFlags(){
     // responded strongly to treatment - now well under target
     if(a.lowerBetter && a.hi!=null && cur.v < a.hi*0.45 && pts.length>=2){
       var everHigh=pts.some(function(p){ return p.v>a.hi; });
-      if(everHigh) out.push({pri:3,name:a.name,val:vtxt,date:cur.date,
+      if(everHigh) out.push({pri:3,id:a.id,name:a.name,val:vtxt,date:cur.date,
         why:"Was above range previously and is now well below the target of "+rangeText(a)+".",
         ask:"Is the current dose still the right one now that this has fallen this far?"});
     }
@@ -838,9 +900,9 @@ function buildFlags(){
   (STATE.meds||[]).forEach(function(md){
     if(!md.until) return;
     var d=daysBetween(today, md.until);
-    if(d<0) out.push({pri:1,name:md.name+" — prescription lapsed",val:fmtDate(md.until),date:md.until,
+    if(d<0) out.push({pri:1,med:1,name:md.name+" — prescription lapsed",val:fmtDate(md.until),date:md.until,
       why:"The prescription end date has passed.",ask:"Should this be refilled or has it been stopped intentionally?"});
-    else if(d<=21) out.push({pri:2,name:md.name+" — refill due",val:fmtDate(md.until),date:md.until,
+    else if(d<=21) out.push({pri:2,med:1,name:md.name+" — refill due",val:fmtDate(md.until),date:md.until,
       why:"Prescription ends in "+d+" day"+(d===1?"":"s")+".",ask:"Should this be renewed?"});
   });
 
@@ -859,9 +921,12 @@ function renderDoc(root){
   var last=null;
   flags.forEach(function(x){
     if(x.pri!==last){ h+='<div class="sect">'+labels[x.pri]+'</div>'; last=x.pri; }
-    h+='<div class="flag p'+x.pri+'"><div class="top"><h4>'+esc(x.name)+'</h4><span class="val">'+esc(x.val)+'</span></div>'+
+    var tap = x.id ? ' data-open="'+x.id+'"' : (x.med ? ' data-gomeds="1"' : '');
+    h+='<div class="flag p'+x.pri+(tap?' tappable':'')+'"'+tap+'><div class="top"><h4>'+esc(x.name)+'</h4><span class="val">'+esc(x.val)+'</span></div>'+
        '<div class="why">'+esc(x.why)+'</div>'+
-       '<div class="ask"><b>Ask:</b> '+esc(x.ask)+'</div></div>';
+       '<div class="ask"><b>Ask:</b> '+esc(x.ask)+'</div>'+
+       (x.id?'<div class="seeall">See the full history &rsaquo;</div>':(x.med?'<div class="seeall">Open medications &rsaquo;</div>':''))+
+       '</div>';
   });
   h+='<button class="btn" id="doc-pdf">Export PDF / Print</button>'+
      '<button class="btn ghost" id="doc-copy">Copy this list</button>'+
@@ -1040,7 +1105,16 @@ function render(editDate){
   else if(TAB==="meds") renderMeds(root);
   else renderData(root);
   document.querySelectorAll(".tabs button").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-tab")===TAB); });
-  root.querySelectorAll("[data-open]").forEach(function(r){ r.onclick=function(){ openModal(r.getAttribute("data-open")); }; });
+  root.querySelectorAll("[data-open]").forEach(function(r){ r.onclick=function(){ SHEET_BACK=null; openModal(r.getAttribute("data-open")); }; });
+  if(TAB==="doc") root.querySelectorAll(".flag[data-open]").forEach(function(r){ r.onclick=function(){
+    SHEET_BACK=null; openModal(r.getAttribute("data-open")); }; });
+  root.querySelectorAll("[data-kpi]").forEach(function(r){ r.onclick=function(){ openStatusList(r.getAttribute("data-kpi")); }; });
+  root.querySelectorAll("[data-report]").forEach(function(r){ r.onclick=function(e){
+    if(e.target.tagName==="BUTTON") return; openReport(r.getAttribute("data-report")); }; });
+  root.querySelectorAll("[data-cat]").forEach(function(r){ if(r.classList.contains("taph")) r.onclick=function(){
+    TRENDCAT=r.getAttribute("data-cat"); TAB="trends"; render(); window.scrollTo(0,0); }; });
+  root.querySelectorAll("[data-gomeds]").forEach(function(r){ r.onclick=function(){
+    TAB="meds"; render(); window.scrollTo(0,0); }; });
 }
 document.querySelectorAll(".tabs button").forEach(function(b){
   b.onclick=function(){ TAB=b.getAttribute("data-tab"); render(); window.scrollTo(0,0); };
