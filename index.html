@@ -663,6 +663,9 @@ var SB = {
   saving:false, again:false,
   pendingDeletes:[],   // dates the USER deleted in this session - the only rows save() may remove
   medsDirty:false,     // medications are rewritten wholesale, so only touch them when changed
+  loaded:false,        // did this session ever successfully read the settings row?
+  watchDirty:false,    // ...and did the user change the watchlist in it?
+  profileDirty:false,  // ...or the profile?
 
   load: function(){
     busy(true);
@@ -688,6 +691,8 @@ var SB = {
       STATE.watch = { cats: w.cats || [], ids: w.ids || [] };
       applyProfileRanges();
       SB.pendingDeletes = []; SB.medsDirty = false;
+      SB.watchDirty = false; SB.profileDirty = false;
+      SB.loaded = true;
       busy(false);
       note(STATE.results.length + " reports \u00b7 synced");
     });
@@ -735,13 +740,18 @@ var SB = {
       })
       .then(function(res){
         if(res && res.error) throw res.error;
-        return sb.from("app_settings").upsert(
-          { analytes:STATE.analytesRaw, profile:STATE.profile||{},
-            watch:STATE.watch||{cats:[],ids:[]} }, { onConflict:"user_id" });
+        // Only send columns this session actually owns. Anything untouched is
+        // omitted, so another device's newer value survives.
+        var settings = { analytes:STATE.analytesRaw };
+        if(self.profileDirty) settings.profile = STATE.profile||{};
+        if(self.watchDirty)   settings.watch   = STATE.watch||{cats:[],ids:[]};
+        if(!self.loaded) return { error:null };      // never loaded: write nothing
+        return sb.from("app_settings").upsert(settings, { onConflict:"user_id" });
       })
       .then(function(){
         self.saving = false; busy(false);
         self.pendingDeletes = []; self.medsDirty = false;
+        self.watchDirty = false; self.profileDirty = false;
         note(STATE.results.length + " reports \u00b7 synced");
         if(self.again){ self.again = false; self.save(); }
       })
@@ -1727,12 +1737,14 @@ function watchedAnalytes(){
 }
 function toggleWatchCat(c){
   if(!STATE.watch) STATE.watch={cats:[],ids:[]};
+  SB.watchDirty=true;
   var i=STATE.watch.cats.indexOf(c);
   if(i>=0) STATE.watch.cats.splice(i,1); else STATE.watch.cats.push(c);
   persist();
 }
 function toggleWatchId(id){
   if(!STATE.watch) STATE.watch={cats:[],ids:[]};
+  SB.watchDirty=true;
   var a=byId[id];
   // Un-starring one test out of a watched panel: keep the rest by pinning them
   // individually, rather than silently dropping the whole panel.
@@ -2260,6 +2272,7 @@ function render(editDate){
       lab:    document.getElementById("pf-lab").value.trim()
     };
     applyProfileRanges();     // sex may have changed which limits apply
+    SB.profileDirty=true;
     persist(); render();
     themeToast("Profile saved");
   };
